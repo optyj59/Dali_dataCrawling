@@ -81,9 +81,7 @@ class CrawlerEngine:
 
     async def extract_comments(self, video_url: str):
         """
-        2단계 대기 로직을 사용하여 댓글의 초기 배치를 안정적으로 추출합니다.
-        1. 댓글 전체를 감싸는 컨테이너(`ytd-comments#comments`)가 나타날 때까지 대기합니다.
-        2. 컨테이너가 나타나면, 그 안에서 첫 번째 댓글 스레드(`ytd-comment-thread-renderer`)가 렌더링될 때까지 대기합니다.
+        2단계 대기 로직과 마지막 요소를 기준으로 한 스크롤을 사용하여 댓글을 수집합니다.
         """
         print(f"댓글 수집 시작: {video_url}")
         if self.page.url != video_url:
@@ -103,10 +101,30 @@ class CrawlerEngine:
             print("2단계: 첫 댓글 스레드(ytd-comment-thread-renderer) 렌더링을 기다립니다...")
             first_comment_selector = "ytd-comment-thread-renderer"
             await self.page.wait_for_selector(first_comment_selector, state="visible", timeout=15000)
-            print("=> 2단계 성공: 첫 댓글 확인. 파싱을 시작합니다.")
+            print("=> 2단계 성공: 첫 댓글 확인.")
 
-            # 잠시 후 DOM이 안정화될 시간을 줌
-            await asyncio.sleep(1)
+            # --- 새로운 스크롤 로직 시작 ---
+            print("댓글 추가 로드를 위해 '마지막 댓글' 기준 스크롤을 시작합니다...")
+            scroll_count = 0
+            max_scrolls = 3 # 3번 스크롤하여 약 50개 댓글 수집 시도
+
+            while scroll_count < max_scrolls:
+                scroll_count += 1
+                print(f"스크롤 시도 #{scroll_count}...")
+                
+                # 현재 로드된 마지막 댓글을 찾아 그 위치로 스크롤
+                await self.page.evaluate('''() => {
+                    const comments = document.querySelectorAll('ytd-comment-thread-renderer');
+                    if (comments.length > 0) {
+                        comments[comments.length - 1].scrollIntoView();
+                    }
+                }''')
+                
+                # 새 댓글이 로드될 시간을 2초간 대기
+                await asyncio.sleep(2)
+            
+            print("스크롤 완료.")
+            # --- 새로운 스크롤 로직 끝 ---
 
             html_content = await self.page.content()
             soup = BeautifulSoup(html_content, 'html.parser')
@@ -137,17 +155,17 @@ class CrawlerEngine:
 
                 comments.append({
                     'id': comment_id,
-                    'author': self.mask_pii(author_text_element.text.strip()),
-                    'content': self.mask_pii(content_text_element.text.strip()),
+                    'author': author_text_element.text.strip(),
+                    'content': content_text_element.text.strip(),
                     'likes': like_count_element.text.strip() if like_count_element else '0'
                 })
                 processed_comment_ids.add(comment_id)
 
-            print(f"총 {len(comments)}개의 댓글을 초기 배치에서 수집했습니다.")
+            print(f"총 {len(comments)}개의 댓글을 수집했습니다.")
             return comments
 
         except Exception as e:
-            print(f"오류: 새로운 2단계 대기 로직 실행 중 문제가 발생했습니다. ({e})")
+            print(f"오류: 댓글 수집 중 문제가 발생했습니다. ({e})")
             print("디버깅을 위해 현재 페이지의 HTML을 'src/debug_page_content.html'에 저장합니다.")
             html_content = await self.page.content()
             with open("src/debug_page_content.html", "w", encoding="utf-8") as f:
