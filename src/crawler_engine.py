@@ -2,6 +2,9 @@ import asyncio
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 import re
+import csv
+from datetime import datetime
+import os
 
 class CrawlerEngine:
     def __init__(self):
@@ -18,7 +21,7 @@ class CrawlerEngine:
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
         print("Playwright 초기화 완료.")
-
+ 
     async def get_video_metadata(self, video_url: str):
         """
         영상 페이지에서 메타데이터 (조회수, 댓글 수 등)를 추출합니다.
@@ -81,96 +84,163 @@ class CrawlerEngine:
 
     async def extract_comments(self, video_url: str):
         """
-        2단계 대기 로직과 마지막 요소를 기준으로 한 스크롤을 사용하여 댓글을 수집합니다.
+        DOM thread 증가 기반 버전
+        1) 스크롤하며 ytd-comment-thread-renderer 개수 증가만 감시
+        2) 증가가 멈추면=최상위 댓글 로딩 끝
+        3) 각 thread 내부의 more-replies 버튼을 모두 클릭하여 답글 완전 오픈
+        4) HTML 파싱
         """
-        print(f"댓글 수집 시작: {video_url}")
+
+        print(f"[INFO] 시작: 댓글 수집 (DOM thread 기반) {video_url}")
+
         if self.page.url != video_url:
             await self.page.goto(video_url, wait_until="load")
 
-        try:
-            # 페이지를 약간 아래로 스크롤하여 댓글 섹션 로드를 유도
-            await self.page.evaluate("window.scrollTo(0, 500)")
+        # 초기 스크롤로 댓글 영역을 노출
+        await self.page.evaluate("window.scrollTo(0, 600)")
+        await self.page.wait_for_selector("ytd-comments#comments", timeout=20000)
+        print("[INFO] 댓글 섹션 로딩 완료")
 
-            # 1단계: 댓글의 메인 컨테이너(`ytd-comments#comments`)가 표시될 때까지 대기
-            print("1단계: 댓글 메인 컨테이너(ytd-comments#comments)를 기다립니다...")
-            comments_container_selector = "ytd-comments#comments"
-            await self.page.wait_for_selector(comments_container_selector, state="visible", timeout=15000)
-            print("=> 1단계 성공: 메인 컨테이너 확인.")
+        # ----------------------------------------------------------------------
+        # STEP 1 — DOM 기반 스크롤
+        # ----------------------------------------------------------------------
+        print("[INFO] STEP 1: DOM thread 증가 기반 스크롤 시작")
 
-            # 2단계: 첫 번째 댓글 스레드(`ytd-comment-thread-renderer`)가 렌더링될 때까지 대기
-            print("2단계: 첫 댓글 스레드(ytd-comment-thread-renderer) 렌더링을 기다립니다...")
-            first_comment_selector = "ytd-comment-thread-renderer"
-            await self.page.wait_for_selector(first_comment_selector, state="visible", timeout=15000)
-            print("=> 2단계 성공: 첫 댓글 확인.")
+        stall = 0
+        STALL_LIMIT = 5
+        prev_count = 0
 
-            # --- 새로운 스크롤 로직 시작 ---
-            print("댓글 추가 로드를 위해 '마지막 댓글' 기준 스크롤을 시작합니다...")
-            scroll_count = 0
-            max_scrolls = 3 # 3번 스크롤하여 약 50개 댓글 수집 시도
+        while True:
+            # 현재 DOM에 로드된 댓글 thread 개수
+            current_count = await self.page.evaluate("""
+                document.querySelectorAll('ytd-comment-thread-renderer').length
+            """)
 
-            while scroll_count < max_scrolls:
-                scroll_count += 1
-                print(f"스크롤 시도 #{scroll_count}...")
-                
-                # 현재 로드된 마지막 댓글을 찾아 그 위치로 스크롤
-                await self.page.evaluate('''() => {
-                    const comments = document.querySelectorAll('ytd-comment-thread-renderer');
-                    if (comments.length > 0) {
-                        comments[comments.length - 1].scrollIntoView();
-                    }
-                }''')
-                
-                # 새 댓글이 로드될 시간을 2초간 대기
-                await asyncio.sleep(2)
-            
-            print("스크롤 완료.")
-            # --- 새로운 스크롤 로직 끝 ---
+            print(f"[SCROLL] 현재 thread 개수: {current_count}")
 
-            html_content = await self.page.content()
-            soup = BeautifulSoup(html_content, 'html.parser')
+            if current_count > prev_count:
+                stall = 0
+                prev_count = current_count
+            else:
+                stall += 1
+                print(f"[SCROLL] thread 증가 없음 → stall {stall}/{STALL_LIMIT}")
 
-            comments = []
-            processed_comment_ids = set()
+            if stall >= STALL_LIMIT:
+                print("[INFO] 스크롤 종료 – 모든 최상위 댓글 로드 완료")
+                break
 
-            # `ytd-comment-thread-renderer`를 기준으로 파싱
-            for thread in soup.select("ytd-comment-thread-renderer"):
-                comment_view = thread.select_one("ytd-comment-view-model")
-                if not comment_view: continue
+            # 스크롤 시도
+            await self.page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+            await asyncio.sleep(1.2)
 
-                time_link = comment_view.select_one('#published-time-text a')
-                if not time_link or not time_link.get('href'): continue
-                
-                href = time_link['href']
-                match = re.search(r'&lc=([\w.-]+)', href)
-                if not match: continue
-                comment_id = match.group(1)
+        # ----------------------------------------------------------------------
+        # STEP 2 — 각 스레드의 모든 답글 완전 오픈
+        # ----------------------------------------------------------------------
+        print("\n[INFO] STEP 2: 모든 답글 완전 오픈 시작")
 
-                if comment_id in processed_comment_ids: continue
+        threads = await self.page.query_selector_all("ytd-comment-thread-renderer")
+        print(f"[INFO] 총 {len(threads)}개의 상위 댓글 스레드 처리 예정")
 
-                author_text_element = comment_view.select_one("#author-text")
-                content_text_element = comment_view.select_one("#content-text")
-                like_count_element = comment_view.select_one("#vote-count-middle")
+        for i, thread in enumerate(threads):
+            print(f"[REPLIES] 스레드 {i+1}/{len(threads)} 처리 중")
 
-                if not author_text_element or not content_text_element: continue
+            # thread가 화면에 보이도록 함
+            try:
+                await thread.scroll_into_view_if_needed()
+                await asyncio.sleep(0.2)
+            except:
+                pass
 
-                comments.append({
-                    'id': comment_id,
-                    'author': author_text_element.text.strip(),
-                    'content': content_text_element.text.strip(),
-                    'likes': like_count_element.text.strip() if like_count_element else '0'
-                })
-                processed_comment_ids.add(comment_id)
+            # 반복적으로 more-replies 클릭
+            while True:
+                btn = await thread.query_selector("ytd-button-renderer#more-replies:not([disabled])")
+                if not btn:
+                    break
+                try:
+                    await btn.click()
+                    await asyncio.sleep(0.6)
+                    print(f"  └─ [REPLIES] reply 추가 오픈")
+                except:
+                    break
 
-            print(f"총 {len(comments)}개의 댓글을 수집했습니다.")
-            return comments
+            # 긴 댓글 '더보기' 버튼 처리
+            try:
+                more = await thread.query_selector("#more-button")
+                if more:
+                    await more.click()
+                    await asyncio.sleep(0.2)
+            except:
+                pass
 
-        except Exception as e:
-            print(f"오류: 댓글 수집 중 문제가 발생했습니다. ({e})")
-            print("디버깅을 위해 현재 페이지의 HTML을 'src/debug_page_content.html'에 저장합니다.")
-            html_content = await self.page.content()
-            with open("src/debug_page_content.html", "w", encoding="utf-8") as f:
-                f.write(html_content)
-            return []
+        # ----------------------------------------------------------------------
+        # STEP 3 — HTML 파싱
+        # ----------------------------------------------------------------------
+        print("\n[INFO] STEP 3: HTML 파싱 시작")
+
+        html = await self.page.content()
+        soup = BeautifulSoup(html, "html.parser")
+
+        comments = []
+        seen_ids = set()
+
+        # ------------------ 상위 댓글 ------------------
+        for thread in soup.select("ytd-comment-thread-renderer"):
+            top = thread.select_one("ytd-comment-view-model")
+            if top:
+                time_link = top.select_one('#published-time-text a')
+                href = time_link.get('href') if time_link else None
+                cid, pid = None, None
+
+                if href:
+                    m = re.search(r'&lc=([\w.-]+)', href)
+                    if m:
+                        fid = m.group(1)
+                        if '.' in fid:
+                            pid, cid = fid.split('.', 1)
+                        else:
+                            cid = fid
+
+                if cid and cid not in seen_ids:
+                    comments.append({
+                        'id': cid,
+                        'parent_id': pid,
+                        'author': (top.select_one("#author-text") or {}).text.strip(),
+                        'content': (top.select_one("#content-text") or {}).text.strip(),
+                        'likes': (top.select_one("#vote-count-middle") or {}).text.strip() or "0",
+                        'created_time': time_link.text.strip() if time_link else "",
+                    })
+                    seen_ids.add(cid)
+
+            # ------------------ 대댓글 ------------------
+            for reply in thread.select("ytd-comment-replies-renderer ytd-comment-view-model"):
+                time_link = reply.select_one('#published-time-text a')
+                href = time_link.get('href') if time_link else None
+                rid, pid = None, None
+
+                if href:
+                    m = re.search(r'&lc=([\w.-]+)', href)
+                    if m:
+                        fid = m.group(1)
+                        if '.' in fid:
+                            pid, rid = fid.split('.', 1)
+                        else:
+                            rid = fid
+
+                if rid and rid not in seen_ids:
+                    comments.append({
+                        'id': rid,
+                        'parent_id': pid,
+                        'author': (reply.select_one("#author-text") or {}).text.strip(),
+                        'content': (reply.select_one("#content-text") or {}).text.strip(),
+                        'likes': (reply.select_one("#vote-count-middle") or {}).text.strip() or "0",
+                        'created_time': time_link.text.strip() if time_link else "",
+                    })
+                    seen_ids.add(rid)
+
+        print(f"[INFO] 수집 완료: 총 {len(comments)}개의 댓글(답글 포함)")
+
+        return comments
+
 
     def mask_pii(self, text: str) -> str:
         """
@@ -190,7 +260,7 @@ class CrawlerEngine:
 
 async def main():
     crawler = CrawlerEngine()
-    video_url = "https://www.youtube.com/watch?v=ftQZo7XaTOA" # 테스트 영상 URL
+    video_url = "https://www.youtube.com/watch?v=Lt07GjGEXNE&list=RDLt07GjGEXNE&start_radio=1" # 테스트 영상 URL
     
     try:
         await crawler.initialize()
@@ -206,12 +276,52 @@ async def main():
             print("\n[조건 충족] 댓글 수집을 시작합니다...")
             comments = await crawler.extract_comments(video_url)
             
-            print("\n--- 최종 수집된 댓글 샘플 ---")
             if comments:
+                print(f"\n--- 최종 수집된 댓글 ({len(comments)}개) ---")
                 for i, comment in enumerate(comments[:5]):
-                    print(f"ID: {comment['id']}, 좋아요: {comment['likes']}, 내용: {comment['content'][:50]}...")
+                    print(f"ID: {comment['id']}, Parent ID: {comment['parent_id']}, 작성자: {comment['author']}, 좋아요: {comment['likes']}, 작성시간: {comment['created_time']}, 내용: {comment['content'][:30]}...")
+
+                # --- CSV 저장 로직 ---
+                video_id = video_url.split('v=')[-1]
+                collection_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # 스크립트 파일의 위치를 기준으로 프로젝트 루트 경로를 계산
+                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                
+                # 저장할 파일 경로를 절대 경로로 지정
+                output_path = os.path.join(project_root, "data", "comments_raw.csv")
+                
+                # 저장할 데이터 가공
+                save_data = []
+                for comment in comments:
+                    save_data.append({
+                        'video_id': video_id,
+                        'comment_id': comment['id'],
+                        'parent_comment_id': comment['parent_id'],
+                        'author': comment['author'],
+                        'content': comment['content'],
+                        'likes': comment['likes'],
+                        'created_time': comment['created_time'],
+                        'collection_time': collection_time
+                    })
+
+                # CSV 파일에 저장
+                try:
+                    # 파일 저장 전 디렉터리 존재 확인 및 생성
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+                    with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
+                        # 헤더는 저장할 데이터의 key 값들을 사용
+                        writer = csv.DictWriter(f, fieldnames=save_data[0].keys(), quoting=csv.QUOTE_MINIMAL)
+                        writer.writeheader()
+                        writer.writerows(save_data)
+                    print(f"\n성공: 수집된 댓글 {len(save_data)}개를 '{output_path}'에 저장했습니다.")
+                except Exception as e:
+                    print(f"\n오류: CSV 파일 저장에 실패했습니다. ({e})")
+                # --- CSV 저장 로직 끝 ---
+
             else:
-                print("수집된 댓글이 없습니다.")
+                print("\n수집된 댓글이 없습니다.")
             
         else:
             print("\n[조건 미충족] 댓글을 수집하지 않습니다.")
