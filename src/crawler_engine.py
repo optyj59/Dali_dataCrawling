@@ -84,107 +84,119 @@ class CrawlerEngine:
 
     async def extract_comments(self, video_url: str):
         """
-        DOM thread 증가 기반 버전
-        1) 스크롤하며 ytd-comment-thread-renderer 개수 증가만 감시
-        2) 증가가 멈추면=최상위 댓글 로딩 끝
-        3) 각 thread 내부의 more-replies 버튼을 모두 클릭하여 답글 완전 오픈
-        4) HTML 파싱
+        초고속 / 안정 완전수집 버전 (reply 증가량 기반 종료)
+        1) 모든 top-level thread 로딩 (stall 기반)
+        2) reply 버튼을 전역에서 모두 클릭하되,
+           reply DOM 증가량이 0이면 즉시 종료
+        3) HTML 파싱
         """
 
-        print(f"[INFO] 시작: 댓글 수집 (DOM thread 기반) {video_url}")
+        print(f"[INFO] 시작: 댓글 수집 (reply 증가량 기반 완전수집) {video_url}")
 
         if self.page.url != video_url:
             await self.page.goto(video_url, wait_until="load")
 
-        # 초기 스크롤로 댓글 영역을 노출
+        # 초기 스크롤
         await self.page.evaluate("window.scrollTo(0, 600)")
-        await self.page.wait_for_selector("ytd-comments#comments", timeout=20000)
-        print("[INFO] 댓글 섹션 로딩 완료")
+        await self.page.wait_for_selector("ytd-comment-thread-renderer", timeout=20000)
+        print("[INFO] 댓글 섹션 로드 완료")
 
-        # ----------------------------------------------------------------------
-        # STEP 1 — DOM 기반 스크롤
-        # ----------------------------------------------------------------------
-        print("[INFO] STEP 1: DOM thread 증가 기반 스크롤 시작")
+        # ---------------------------------------------------
+        # STEP 1 — 스크롤해 전체 top-level thread 로딩
+        # ---------------------------------------------------
+        print("[INFO] STEP 1: 최상위 댓글 로딩 시작")
 
         stall = 0
         STALL_LIMIT = 5
-        prev_count = 0
 
         while True:
-            # 현재 DOM에 로드된 댓글 thread 개수
-            current_count = await self.page.evaluate("""
-                document.querySelectorAll('ytd-comment-thread-renderer').length
-            """)
+            prev_count = await self.page.evaluate(
+                "document.querySelectorAll('ytd-comment-thread-renderer').length"
+            )
 
-            print(f"[SCROLL] 현재 thread 개수: {current_count}")
-
-            if current_count > prev_count:
-                stall = 0
-                prev_count = current_count
-            else:
-                stall += 1
-                print(f"[SCROLL] thread 증가 없음 → stall {stall}/{STALL_LIMIT}")
-
-            if stall >= STALL_LIMIT:
-                print("[INFO] 스크롤 종료 – 모든 최상위 댓글 로드 완료")
-                break
-
-            # 스크롤 시도
             await self.page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
             await asyncio.sleep(1.2)
 
-        # ----------------------------------------------------------------------
-        # STEP 2 — 각 스레드의 모든 답글 완전 오픈
-        # ----------------------------------------------------------------------
-        print("\n[INFO] STEP 2: 모든 답글 완전 오픈 시작")
+            new_count = await self.page.evaluate(
+                "document.querySelectorAll('ytd-comment-thread-renderer').length"
+            )
 
-        threads = await self.page.query_selector_all("ytd-comment-thread-renderer")
-        print(f"[INFO] 총 {len(threads)}개의 상위 댓글 스레드 처리 예정")
+            if new_count == prev_count:
+                stall += 1
+                print(f"[SCROLL] thread 증가 없음 (stall {stall}/{STALL_LIMIT})")
+            else:
+                stall = 0
+                print(f"[SCROLL] thread 증가: {new_count}")
 
-        for i, thread in enumerate(threads):
-            print(f"[REPLIES] 스레드 {i+1}/{len(threads)} 처리 중")
+            if stall >= STALL_LIMIT:
+                print("[INFO] 최상위 댓글 완전 로드 완료")
+                break
 
-            # thread가 화면에 보이도록 함
+        # ---------------------------------------------------
+        # STEP 2 — [실험] 단일 실행(Single-pass)으로 reply 열기
+        # ---------------------------------------------------
+        print("\n[INFO] STEP 2: 단일 실행으로 reply 열기 시작")
+
+        # 1. 아직 열리지 않은 '답글 보기' 버튼 찾기
+        initial_reply_buttons = await self.page.query_selector_all(
+            "ytd-comment-thread-renderer:has(ytd-comment-replies-renderer[hidden]) #more-replies:not([disabled])"
+        )
+
+        # 2. 이미 열린 섹션 내부의 '답글 더보기' 버튼 찾기
+        more_reply_buttons = await self.page.query_selector_all(
+            "ytd-comment-replies-renderer:not([hidden]) #more-replies:not([disabled])"
+        )
+
+        candidate_buttons = initial_reply_buttons + more_reply_buttons
+        print(f"[REPLIES] 클릭 후보 버튼 {len(candidate_buttons)}개 발견")
+
+        buttons_to_click = []
+        # 텍스트 필터링으로 '숨기기' 버튼 제외
+        for btn in candidate_buttons:
             try:
-                await thread.scroll_into_view_if_needed()
-                await asyncio.sleep(0.2)
-            except:
+                btn_text = await btn.inner_text()
+                if '숨기기' not in btn_text and 'Hide' not in btn_text:
+                    buttons_to_click.append(btn)
+            except Exception:
+                # 버튼이 사라지는 등의 예외 상황 처리
                 pass
 
-            # 반복적으로 more-replies 클릭
-            while True:
-                btn = await thread.query_selector("ytd-button-renderer#more-replies:not([disabled])")
-                if not btn:
-                    break
+        if not buttons_to_click:
+            print("[INFO] 클릭할 답글 버튼이 없습니다.")
+        else:
+            print(f"[REPLIES] 실제 클릭할 버튼 {len(buttons_to_click)}개 필터링 완료")
+
+            # 필터링된 버튼들 클릭
+            for btn in buttons_to_click:
                 try:
+                    await btn.scroll_into_view_if_needed()
                     await btn.click()
-                    await asyncio.sleep(0.6)
-                    print(f"  └─ [REPLIES] reply 추가 오픈")
-                except:
-                    break
+                    await asyncio.sleep(0.1)
+                except Exception as e:
+                    print(f"[WARN] 버튼 클릭 중 오류 발생 (무시): {e}")
+                    pass
 
-            # 긴 댓글 '더보기' 버튼 처리
-            try:
-                more = await thread.query_selector("#more-button")
-                if more:
-                    await more.click()
-                    await asyncio.sleep(0.2)
-            except:
-                pass
+            # 답글이 렌더링될 시간을 충분히 줌
+            print("[REPLIES] 모든 버튼 클릭 완료. 5초간 최종 렌더링 대기...")
+            await asyncio.sleep(5)
 
-        # ----------------------------------------------------------------------
+        print("[REPLIES] 단일 실행 완료. HTML 파싱으로 넘어갑니다.")
+
+        # ---------------------------------------------------
         # STEP 3 — HTML 파싱
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------
         print("\n[INFO] STEP 3: HTML 파싱 시작")
 
         html = await self.page.content()
         soup = BeautifulSoup(html, "html.parser")
 
         comments = []
-        seen_ids = set()
+        processed_ids = set()
 
-        # ------------------ 상위 댓글 ------------------
+        # top-level + replies 모두 파싱
         for thread in soup.select("ytd-comment-thread-renderer"):
+
+            # -------- top-level --------
             top = thread.select_one("ytd-comment-view-model")
             if top:
                 time_link = top.select_one('#published-time-text a')
@@ -200,18 +212,18 @@ class CrawlerEngine:
                         else:
                             cid = fid
 
-                if cid and cid not in seen_ids:
+                if cid and cid not in processed_ids:
                     comments.append({
-                        'id': cid,
-                        'parent_id': pid,
-                        'author': (top.select_one("#author-text") or {}).text.strip(),
-                        'content': (top.select_one("#content-text") or {}).text.strip(),
-                        'likes': (top.select_one("#vote-count-middle") or {}).text.strip() or "0",
-                        'created_time': time_link.text.strip() if time_link else "",
+                        "id": cid,
+                        "parent_id": pid,
+                        "author": (top.select_one("#author-text") or {}).text.strip(),
+                        "content": (top.select_one("#content-text") or {}).text.strip(),
+                        "likes": (top.select_one("#vote-count-middle") or {}).text.strip() or "0",
+                        "created_time": time_link.text.strip() if time_link else "",
                     })
-                    seen_ids.add(cid)
+                    processed_ids.add(cid)
 
-            # ------------------ 대댓글 ------------------
+            # -------- replies --------
             for reply in thread.select("ytd-comment-replies-renderer ytd-comment-view-model"):
                 time_link = reply.select_one('#published-time-text a')
                 href = time_link.get('href') if time_link else None
@@ -226,19 +238,18 @@ class CrawlerEngine:
                         else:
                             rid = fid
 
-                if rid and rid not in seen_ids:
+                if rid and rid not in processed_ids:
                     comments.append({
-                        'id': rid,
-                        'parent_id': pid,
-                        'author': (reply.select_one("#author-text") or {}).text.strip(),
-                        'content': (reply.select_one("#content-text") or {}).text.strip(),
-                        'likes': (reply.select_one("#vote-count-middle") or {}).text.strip() or "0",
-                        'created_time': time_link.text.strip() if time_link else "",
+                        "id": rid,
+                        "parent_id": pid,
+                        "author": (reply.select_one("#author-text") or {}).text.strip(),
+                        "content": (reply.select_one("#content-text") or {}).text.strip(),
+                        "likes": (reply.select_one("#vote-count-middle") or {}).text.strip() or "0",
+                        "created_time": time_link.text.strip() if time_link else "",
                     })
-                    seen_ids.add(rid)
+                    processed_ids.add(rid)
 
-        print(f"[INFO] 수집 완료: 총 {len(comments)}개의 댓글(답글 포함)")
-
+        print(f"[INFO] 총 수집된 댓글 수(답글 포함): {len(comments)}")
         return comments
 
 
@@ -260,7 +271,7 @@ class CrawlerEngine:
 
 async def main():
     crawler = CrawlerEngine()
-    video_url = "https://www.youtube.com/watch?v=Lt07GjGEXNE&list=RDLt07GjGEXNE&start_radio=1" # 테스트 영상 URL
+    video_url = "https://www.youtube.com/watch?v=ftQZo7XaTOA&t=1231s" # 테스트 영상 URL
     
     try:
         await crawler.initialize()

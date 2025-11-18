@@ -55,7 +55,7 @@ def get_youtube_comments(video_id, api_key, max_results=100):
 
         if "error" in data:
             print("API Error:", data["error"]["message"])
-            break
+            break``
 
         for item in data.get("items", []):
             top = item["snippet"]["topLevelComment"]["snippet"]
