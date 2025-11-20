@@ -6,7 +6,7 @@ import requests
 # 1. URL / API KEY 입력
 # ======================================
 API_KEY = "AIzaSyAWjJ4aF40ChlNj_W7wGB5Sz8pMHIchRtI"        # ← API KEY 입력
-VIDEO_URL = "https://www.youtube.com/watch?v=Lt07GjGEXNE&list=RDLt07GjGEXNE&start_radio=1"    # ← 유튜브 영상 URL 입력
+VIDEO_URL = "https://www.youtube.com/watch?v=ftQZo7XaTOA&t=1231s"    # ← 유튜브 영상 URL 입력
 
 
 # ======================================
@@ -55,7 +55,7 @@ def get_youtube_comments(video_id, api_key, max_results=100):
 
         if "error" in data:
             print("API Error:", data["error"]["message"])
-            break``
+            break
 
         for item in data.get("items", []):
             top = item["snippet"]["topLevelComment"]["snippet"]

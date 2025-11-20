@@ -102,85 +102,125 @@ class CrawlerEngine:
         print("[INFO] 댓글 섹션 로드 완료")
 
         # ---------------------------------------------------
-        # STEP 1 — 스크롤해 전체 top-level thread 로딩
+        # STEP 1 — 과감 스크롤 기반 최상위 댓글 완전 로딩
         # ---------------------------------------------------
-        print("[INFO] STEP 1: 최상위 댓글 로딩 시작")
+        print("[INFO] STEP 1: 최상위 댓글 로딩 시작 (과감 스크롤 + STALL 유지)")
 
-        stall = 0
-        STALL_LIMIT = 5
+        STALL = 0
+        STALL_LIMIT = 5  # 기존 구조 유지
 
         while True:
             prev_count = await self.page.evaluate(
                 "document.querySelectorAll('ytd-comment-thread-renderer').length"
             )
 
-            await self.page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
-            await asyncio.sleep(1.2)
+            for _ in range(5):     # “한 라운드”에서 5번 정도 big scroll
+                await self.page.evaluate("window.scrollBy(0, 1000)")  
+                await asyncio.sleep(0.20)  # 너무 짧게 하면 로딩 타이밍 놓침
 
+            # ------------------------------
+            # 댓글 thread 수 증가 확인
+            # ------------------------------
             new_count = await self.page.evaluate(
                 "document.querySelectorAll('ytd-comment-thread-renderer').length"
             )
 
+            print(f"[SCROLL] thread {new_count}")
+
             if new_count == prev_count:
-                stall += 1
-                print(f"[SCROLL] thread 증가 없음 (stall {stall}/{STALL_LIMIT})")
+                STALL += 1
+                print(f"[SCROLL] 증가 없음 (stall {STALL}/{STALL_LIMIT})")
             else:
-                stall = 0
-                print(f"[SCROLL] thread 증가: {new_count}")
+                STALL = 0  # 증가했으면 stall 초기화
 
-            if stall >= STALL_LIMIT:
-                print("[INFO] 최상위 댓글 완전 로드 완료")
+            # ------------------------------
+            # 종료 조건: 더 이상 로드되지 않음
+            # ------------------------------
+            if STALL >= STALL_LIMIT:
+                print("[INFO] 최상위 댓글 완전 로드 완료 (STALL 종료)")
                 break
+        # ---------------------------------------------------
+        # STEP 2 — 답글 보기 버튼 일괄 클릭 → 이어서 답글 더보기 반복 오픈
+        # ---------------------------------------------------
+        print("\n[INFO] STEP 2: 답글 전체 오픈 시작")
 
         # ---------------------------------------------------
-        # STEP 2 — [실험] 단일 실행(Single-pass)으로 reply 열기
+        # (1) 1차: reply “답글 보기” 버튼을 일괄적으로 먼저 클릭
         # ---------------------------------------------------
-        print("\n[INFO] STEP 2: 단일 실행으로 reply 열기 시작")
+        print("[REPLIES] 1차: '답글 보기' 버튼 일괄 클릭 시도")
 
-        # 1. 아직 열리지 않은 '답글 보기' 버튼 찾기
+        # 닫힌 상태의 reply 컨테이너에서 '답글 보기' 버튼 찾기
         initial_reply_buttons = await self.page.query_selector_all(
-            "ytd-comment-thread-renderer:has(ytd-comment-replies-renderer[hidden]) #more-replies:not([disabled])"
+            "ytd-comment-thread-renderer:has(ytd-comment-replies-renderer[hidden]) "
+            "ytd-button-renderer#more-replies:not([disabled])"
         )
 
-        # 2. 이미 열린 섹션 내부의 '답글 더보기' 버튼 찾기
-        more_reply_buttons = await self.page.query_selector_all(
-            "ytd-comment-replies-renderer:not([hidden]) #more-replies:not([disabled])"
+        # 이미 reply 영역이 열린 thread 내부에서 또 존재하는 more-replies
+        opened_reply_buttons = await self.page.query_selector_all(
+            "ytd-comment-replies-renderer:not([hidden]) ytd-button-renderer#more-replies:not([disabled])"
         )
 
-        candidate_buttons = initial_reply_buttons + more_reply_buttons
-        print(f"[REPLIES] 클릭 후보 버튼 {len(candidate_buttons)}개 발견")
+        candidate_buttons = initial_reply_buttons + opened_reply_buttons
+        print(f"[REPLIES] 1차 후보 reply 버튼: {len(candidate_buttons)}개")
 
+        # '숨기기' 버튼 제외
         buttons_to_click = []
-        # 텍스트 필터링으로 '숨기기' 버튼 제외
         for btn in candidate_buttons:
             try:
-                btn_text = await btn.inner_text()
-                if '숨기기' not in btn_text and 'Hide' not in btn_text:
+                txt = await btn.inner_text()
+                if "숨기기" not in txt and "Hide" not in txt:
                     buttons_to_click.append(btn)
-            except Exception:
-                # 버튼이 사라지는 등의 예외 상황 처리
+            except:
                 pass
 
-        if not buttons_to_click:
-            print("[INFO] 클릭할 답글 버튼이 없습니다.")
-        else:
-            print(f"[REPLIES] 실제 클릭할 버튼 {len(buttons_to_click)}개 필터링 완료")
+        print(f"[REPLIES] 실제 클릭할 '답글 보기' 버튼: {len(buttons_to_click)}개")
 
-            # 필터링된 버튼들 클릭
-            for btn in buttons_to_click:
+        for btn in buttons_to_click:
+            try:
+                await btn.scroll_into_view_if_needed()
+                await btn.click()
+                await asyncio.sleep(0.15)
+            except Exception as e:
+                print(f"[WARN] reply 보기 버튼 클릭 실패 (무시): {e}")
+
+        # 클릭 후 DOM 안정화 대기
+        print("[REPLIES] 1차 클릭 완료. DOM 안정화 대기 2초...")
+        await asyncio.sleep(2)
+
+
+        # ---------------------------------------------------
+        # (2) 2차: continuation-item 기반 “답글 더보기” 반복 오픈
+        # ---------------------------------------------------
+        print("\n[REPLIES] 2차: continuation-item 기반 반복 reply 열기 시작")
+
+        round_count = 0
+        while True:
+            round_count += 1
+
+            continuations = await self.page.query_selector_all(
+                "ytd-comment-replies-renderer ytd-continuation-item-renderer"
+            )
+
+            print(f"[REPLIES] 라운드 {round_count}: continuation-item {len(continuations)}개 발견")
+
+            if not continuations:
+                print("[REPLIES] 더 이상 continuation-item 없음 → reply 완전 오픈 완료")
+                break
+
+            for cont in continuations:
                 try:
-                    await btn.scroll_into_view_if_needed()
-                    await btn.click()
-                    await asyncio.sleep(0.1)
+                    await cont.scroll_into_view_if_needed()
+                    button = await cont.query_selector("ytd-button-renderer button")
+                    if button:
+                        await button.click()
+                        await asyncio.sleep(0.20)
                 except Exception as e:
-                    print(f"[WARN] 버튼 클릭 중 오류 발생 (무시): {e}")
-                    pass
+                    print(f"[WARN] continuation-item 클릭 실패: {e}")
 
-            # 답글이 렌더링될 시간을 충분히 줌
-            print("[REPLIES] 모든 버튼 클릭 완료. 5초간 최종 렌더링 대기...")
-            await asyncio.sleep(5)
+            # DOM 업데이트 대기
+            await asyncio.sleep(0.5)
 
-        print("[REPLIES] 단일 실행 완료. HTML 파싱으로 넘어갑니다.")
+        print("[REPLIES] STEP 2 완료 → HTML 파싱 단계로 이동")
 
         # ---------------------------------------------------
         # STEP 3 — HTML 파싱
@@ -286,7 +326,7 @@ async def main():
         if metadata['view_count'] >= 100 and metadata['comment_count'] >= 5:
             print("\n[조건 충족] 댓글 수집을 시작합니다...")
             comments = await crawler.extract_comments(video_url)
-            
+            input()
             if comments:
                 print(f"\n--- 최종 수집된 댓글 ({len(comments)}개) ---")
                 for i, comment in enumerate(comments[:5]):
