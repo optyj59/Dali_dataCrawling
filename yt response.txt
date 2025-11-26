@@ -1,0 +1,124 @@
+commentEntityPayload": {
+                            "key": "EjFVZ3dGX1p0LThKVmFwVklhaUc5NEFhQUJBZy45TjBSajRQOTB4ZTlUOFJHbTMxT0k2ICgoAQ%3D%3D",
+                            "properties": {
+                                "commentId": "UgwF_Zt-8JVapVIaiG94AaABAg.9N0Rj4P90xe9T8RGm31OI6",
+                                "content": {
+                                    "content": "ㅋㅋㅋㅋㅋㅋ 공감되네요 ㅋㅋㅋㅋ"
+                                },
+                                "publishedTime": "4년 전",
+                                "replyLevel": 1,
+                                "authorButtonA11y": "@hwanni6677",
+                                "toolbarStateKey": "EjFVZ3dGX1p0LThKVmFwVklhaUc5NEFhQUJBZy45TjBSajRQOTB4ZTlUOFJHbTMxT0k2ICwoAQ%3D%3D",
+                                "translateButtonEntityKey": "EjFVZ3dGX1p0LThKVmFwVklhaUc5NEFhQUJBZy45TjBSajRQOTB4ZTlUOFJHbTMxT0k2IP8BKAE%3D"
+                            },
+                            "author": {
+                                "channelId": "UCAJ6kN9WB_oqLNo371IvweQ",
+                                "displayName": "@hwanni6677",
+                                "avatarThumbnailUrl": "https://yt3.ggpht.com/nG1WdwaNCSYh3it6zv6XfTaWskzGV0tWERxTOd5T6nI1DGY0c3lC1ddIFZBaSkPot8VzZvah1Kw=s88-c-k-c0x00ffffff-no-rj",
+                                "isVerified": false,
+                                "isCurrentUser": false,
+                                "isCreator": false,
+                                "channelCommand": {
+                                    "innertubeCommand": {
+                                        "clickTrackingParams": "CA8QtnUY____________ASITCNODiMumj5EDFZYDewcd4LgWTMoBBE8i86A=",
+                                        "profileCardCommand": {
+                                            "profileOwnerExternalChannelId": "UCAJ6kN9WB_oqLNo371IvweQ",
+                                            "profileCardContext": "gvXcwwZNEhhVQ1FORTJKbWJhc05ZYmpHQWN1QmlSUmcaMVVnd0ZfWnQtOEpWYXBWSWFpRzk0QWFBQkFnLjlOMFJqNFA5MHhlOVQ4UkdtMzFPSTY%3D",
+                                            "shouldUseProfileBottomSheet": false
+                                        }
+                                    }
+                                },
+                                "isArtist": false,
+                                "channelPageEndpoint": {
+                                    "innertubeCommand": {
+                                        "clickTrackingParams": "CA8QtnUY____________ASITCNODiMumj5EDFZYDewcd4LgWTMoBBE8i86A=",
+                                        "commandMetadata": {
+                                            "webCommandMetadata": {
+                                                "url": "/@hwanni6677",
+                                                "webPageType": "WEB_PAGE_TYPE_CHANNEL",
+                                                "rootVe": 3611,
+                                                "apiUrl": "/youtubei/v1/browse"
+                                            }
+                                        },
+                                        "browseEndpoint": {
+                                            "browseId": "UCAJ6kN9WB_oqLNo371IvweQ",
+                                            "canonicalBaseUrl": "/@hwanni6677"
+                                        }
+                                    }
+                                },
+                                "profileCardEndpoint": {
+                                    "innertubeCommand": {
+                                        "clickTrackingParams": "CA8QtnUY____________ASITCNODiMumj5EDFZYDewcd4LgWTMoBBE8i86A=",
+                                        "profileCardCommand": {
+                                            "profileOwnerExternalChannelId": "UCAJ6kN9WB_oqLNo371IvweQ",
+                                            "profileCardContext": "gvXcwwZNEhhVQ1FORTJKbWJhc05ZYmpHQWN1QmlSUmcaMVVnd0ZfWnQtOEpWYXBWSWFpRzk0QWFBQkFnLjlOMFJqNFA5MHhlOVQ4UkdtMzFPSTY%3D",
+                                            "shouldUseProfileBottomSheet": false
+                                        }
+                                    }
+                                }
+                            },
+                            "toolbar": {
+                                "likeCountLiked": "1",
+                                "likeCountNotliked": " ",
+                                "replyCount": "",
+                                "creatorThumbnailUrl": "https://yt3.ggpht.com/6gJoxwN9IQ3SlQIo1SibzhmwNLfxhX3t15zfQAGMxmV3Fi7aALzNayf2CzqhL5U6c2f4123G=s88-c-k-c0x00ffffff-no-rj",
+                                "likeButtonA11y": "나와 사용자 0명이 이 답글을 좋아함",
+                                "engagementToolbarStyle": {
+                                    "value": "ENGAGEMENT_TOOLBAR_STYLE_VALUE_DEFAULT"
+                                },
+                                "likeCountA11y": "좋아요 0개",
+                                "replyCountA11y": "답글 0개",
+                                "likeInactiveTooltip": "좋아요",
+                                "likeActiveTooltip": "좋아요 취소",
+                                "dislikeInactiveTooltip": "싫어요",
+                                "dislikeActiveTooltip": "싫어요 표시 삭제",
+                                "heartActiveTooltip": "@jocoding님의 ❤"
+                            },
+                            "avatar": {
+                                "image": {
+                                    "sources": [
+                                        {
+                                            "url": "https://yt3.ggpht.com/nG1WdwaNCSYh3it6zv6XfTaWskzGV0tWERxTOd5T6nI1DGY0c3lC1ddIFZBaSkPot8VzZvah1Kw=s88-c-k-c0x00ffffff-no-rj",
+                                            "width": 88,
+                                            "height": 88
+                                        }
+                                    ],
+                                    "processor": {
+                                        "borderImageProcessor": {
+                                            "circular": true
+                                        }
+                                    }
+                                },
+                                "accessibilityText": "@hwanni6677",
+                                "avatarImageSize": "AVATAR_SIZE_XS",
+                                "endpoint": {
+                                    "innertubeCommand": {
+                                        "clickTrackingParams": "CA8QtnUY____________ASITCNODiMumj5EDFZYDewcd4LgWTMoBBE8i86A=",
+                                        "profileCardCommand": {
+                                            "profileOwnerExternalChannelId": "UCAJ6kN9WB_oqLNo371IvweQ",
+                                            "profileCardContext": "gvXcwwZNEhhVQ1FORTJKbWJhc05ZYmpHQWN1QmlSUmcaMVVnd0ZfWnQtOEpWYXBWSWFpRzk0QWFBQkFnLjlOMFJqNFA5MHhlOVQ4UkdtMzFPSTY%3D",
+                                            "shouldUseProfileBottomSheet": false
+                                        }
+                                    }
+                                }
+                            },
+                            "readMoreLogging": {
+                                "trackingParams": "CBAQr7QGIhMI04OIy6aPkQMVlgN7Bx3guBZM",
+                                "loggingDirectives": {
+                                    "trackingParams": "CBAQr7QGIhMI04OIy6aPkQMVlgN7Bx3guBZM",
+                                    "visibility": {
+                                        "types": "12"
+                                    }
+                                }
+                            },
+                            "loggingDirectives": {
+                                "trackingParams": "CA8QtnUY____________ASITCNODiMumj5EDFZYDewcd4LgWTA==",
+                                "visibility": {
+                                    "types": "12"
+                                },
+                                "clientVeSpec": {
+                                    "uiType": 15030,
+                                    "veCounter": 394860183
+                                }
+                            }
+                        }

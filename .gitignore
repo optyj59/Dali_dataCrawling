@@ -1,0 +1,9 @@
+# Ignore output directory
+output/
+
+# Ignore markdown files in the root directory, except README.md
+/*.md
+!/README.md
+
+# Ignore text files in the root directory
+/*.txt

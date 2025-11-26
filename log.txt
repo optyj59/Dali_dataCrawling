@@ -1,3 +1,93 @@
-<div id="button" class="style-scope ytd-continuation-item-renderer"><ytd-button-renderer class="style-scope ytd-continuation-item-renderer" button-renderer="" button-next=""><!--css-build:shady--><yt-button-shape><button class="yt-spec-button-shape-next yt-spec-button-shape-next--text yt-spec-button-shape-next--call-to-action yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading yt-spec-button-shape-next--enable-backdrop-filter-experiment" title="" aria-label="답글 더보기"><div aria-hidden="true" class="yt-spec-button-shape-next__icon"><span class="ytIconWrapperHost" style="width: 24px; height: 24px;"><span class="yt-icon-shape ytSpecIconShapeHost"><div style="width: 100%; height: 100%; display: block; fill: currentcolor;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true" style="pointer-events: none; display: inherit; width: 100%; height: 100%;">
-  <path fill="none" d="M0 0h24v24H0V0z"></path><path d="M19 15l-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z"></path>
-</svg></div></span></span></div><div class="yt-spec-button-shape-next__button-text-content"><span class="yt-core-attributed-string yt-core-attributed-string--white-space-no-wrap" role="text">답글 더보기</span></div><yt-touch-feedback-shape aria-hidden="true" class="yt-spec-touch-feedback-shape yt-spec-touch-feedback-shape--touch-response"><div class="yt-spec-touch-feedback-shape__stroke"></div><div class="yt-spec-touch-feedback-shape__fill"></div></yt-touch-feedback-shape></button></yt-button-shape><tp-yt-paper-tooltip offset="8" disable-upgrade=""></tp-yt-paper-tooltip></ytd-button-renderer></div>
+You are an expert Python architect and crawling pipeline designer.
+
+I am building a YouTube crawling system with the following workflow:
+
+1. Input a keyword (e.g., "아이유 직캠")
+2. Perform YouTube search and extract a large pool of candidate video URLs
+    - At least 30–50 URLs per keyword
+    - Avoid API calls that require authentication unless absolutely necessary
+3. Filter candidate videos by metadata:
+    - view_count ≥ 100
+    - comment_count ≥ 5
+    - (You may add additional filters if helpful)
+4. Distribute the final filtered URLs across multiple worker processes
+    - Use Python multiprocessing (not threading)
+    - Each worker launches its own Playwright instance
+    - Each worker runs an async crawler: extract full comments + replies
+5. Aggregate the results and return:
+    - total_videos_processed
+    - total_comments_collected
+    - failed_urls list
+    - per_video stats
+
+Your task:
+Produce a full architecture plan *and working Python code* for this pipeline.
+
+The code should include:
+
+## 1. Directory layout
+A recommended folder structure such as:
+
+project/
+  ├─ main.py
+  ├─ core/
+  │   ├─ search_engine.py
+  │   ├─ crawler_engine.py
+  │   └─ html_parser.py
+  ├─ workers/
+  │   └─ worker_runner.py
+  ├─ utils/
+  │   ├─ logger.py
+  │   └─ file_utils.py
+  ├─ output/
+
+## 2. search_engine.py
+A YouTube search implementation using **requests + HTML parsing**  
+(no Selenium, no Playwright in this phase)
+
+Must:
+- return candidate video URLs reliably (scrolling via AJAX if possible)
+- work without API keys
+
+## 3. crawler_engine.py
+Playwright-based implementation for:
+- page navigation
+- metadata extraction
+- full comment + reply crawling (stable against hidden buttons & dynamic “more replies”)
+- handle stalls, DOM reload issues
+
+## 4. worker_runner.py
+A minimal function that:
+- receives a video URL
+- runs Playwright async flow
+- returns extracted comments count
+
+## 5. main.py
+The orchestrator that:
+- receives a keyword
+- fetches 50 candidate URLs
+- filters them
+- creates multiprocessing.Pool
+- assigns each URL to workers
+- aggregates results
+- prints summary
+
+## 6. Additional Requirements
+- Code must support Windows/macOS/Linux
+- Use spawn context for multiprocessing
+- No global event loops (per-process loop only)
+- Include robust logging
+- Include detailed comments throughout
+- Provide error-handling for each stage
+
+## 7. Output format
+Return the final answer as:
+
+1) Project architecture explanation  
+2) Full folder structure  
+3) Python implementation for each module  
+4) Instructions for running the system  
+
+Generate code that can be run *as-is*.
+
+

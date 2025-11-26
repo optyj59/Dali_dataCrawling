@@ -7,6 +7,8 @@ from datetime import datetime
 import os
 
 class CrawlerEngine:
+    BASE_URL = "https://www.youtube.com/watch?v="
+
     def __init__(self):
         self.browser = None
         self.context = None
@@ -17,15 +19,16 @@ class CrawlerEngine:
         print("Playwright를 초기화합니다...")
         # headless=False로 설정하여 브라우저 동작을 눈으로 확인할 수 있습니다. (디버깅 용이)
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
+        self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
         print("Playwright 초기화 완료.")
  
-    async def get_video_metadata(self, video_url: str):
+    async def get_video_metadata(self, video_id: str):
         """
         영상 페이지에서 메타데이터 (조회수, 댓글 수 등)를 추출합니다.
         """
+        video_url = self.BASE_URL + video_id
         print(f"영상 메타데이터 수집 중: {video_url}")
         await self.page.goto(video_url)
         await self.page.wait_for_load_state('networkidle')
@@ -81,8 +84,102 @@ class CrawlerEngine:
             'comment_count': parse_count(comment_count_text)
         }
         return metadata
+    
+    async def extract_comments_no_reply(self, video_id: str):
+        video_url = self.BASE_URL + video_id
+        print(f"[INFO] 시작: 최상위 댓글 수집 (답글 미포함) {video_url}")
 
-    async def extract_comments(self, video_url: str):
+        if self.page.url != video_url:
+            await self.page.goto(video_url, wait_until="load")
+
+        # 초기 스크롤
+        await self.page.evaluate("window.scrollTo(0, 600)")
+        await self.page.wait_for_selector("ytd-comment-thread-renderer", timeout=20000)
+        print("[INFO] 댓글 섹션 로드 완료")
+
+        # ---------------------------------------------------
+        # STEP 1 — 과감 스크롤 기반 최상위 댓글 완전 로딩
+        # ---------------------------------------------------
+        print("[INFO] STEP 1: 최상위 댓글 로딩 시작 (과감 스크롤 + STALL 유지)")
+
+        STALL = 0
+        STALL_LIMIT = 5  # 기존 구조 유지
+
+        while True:
+            prev_count = await self.page.evaluate(
+                "document.querySelectorAll('ytd-comment-thread-renderer').length"
+            )
+
+            for _ in range(3):     # “한 라운드”에서 3번 정도 big scroll
+                await self.page.evaluate("window.scrollBy(0, 1000)")  
+                await asyncio.sleep(0.20)  # 너무 짧게 하면 로딩 타이밍 놓침
+
+            # ------------------------------
+            # 댓글 thread 수 증가 확인
+            # ------------------------------
+            new_count = await self.page.evaluate(
+                "document.querySelectorAll('ytd-comment-thread-renderer').length"
+            )
+
+            if new_count == prev_count:
+                STALL += 1
+                print(f"[SCROLL] 증가 없음 (stall {STALL}/{STALL_LIMIT})")
+            else:
+                STALL = 0  # 증가했으면 stall 초기화
+
+            # ------------------------------
+            # 종료 조건: 더 이상 로드되지 않음
+            # ------------------------------
+            if STALL >= STALL_LIMIT:
+                print("[INFO] 최상위 댓글 완전 로드 완료 (STALL 종료)")
+                break
+        
+        print("\n[INFO] STEP 2: HTML 파싱 및 최상위 댓글 추출")
+        html = await self.page.content()
+        soup = BeautifulSoup(html, "html.parser")
+
+        comments = []
+        processed_ids = set()
+
+        # top-level 댓글만 파싱
+        for thread in soup.select("ytd-comment-thread-renderer"):
+
+            # -------- top-level --------
+            # 각 thread의 첫번째 ytd-comment-view-model이 최상위 댓글
+            top = thread.select_one("ytd-comment-view-model")
+            if top:
+                time_link = top.select_one('#published-time-text a')
+                href = time_link.get('href') if time_link else None
+                cid, pid = None, None
+
+                if href:
+                    m = re.search(r'&lc=([\w.-]+)', href)
+                    if m:
+                        fid = m.group(1)
+                        # 최상위 댓글은 ID에 '.'이 없음
+                        if '.' not in fid:
+                            cid = fid
+                        else:
+                            # '.'이 있으면 답글이므로 건너뜀
+                            continue
+                
+                # href가 없는 댓글 등 예외 상황을 고려하여 cid가 있을 때만 처리
+                if cid and cid not in processed_ids:
+                    comments.append({
+                        "id": cid,
+                        "parent_id": None, # 최상위 댓글은 parent_id가 없음
+                        "author": (top.select_one("#author-text") or {}).text.strip(),
+                        "content": (top.select_one("#content-text") or {}).text.strip(),
+                        "likes": (top.select_one("#vote-count-middle") or {}).text.strip() or "0",
+                        "created_time": time_link.text.strip() if time_link else "",
+                    })
+                    processed_ids.add(cid)
+
+        print(f"[INFO] 총 수집된 최상위 댓글 수: {len(comments)}")
+        return comments
+
+
+    async def extract_comments(self, video_id: str):
         """
         초고속 / 안정 완전수집 버전 (reply 증가량 기반 종료)
         1) 모든 top-level thread 로딩 (stall 기반)
@@ -90,7 +187,7 @@ class CrawlerEngine:
            reply DOM 증가량이 0이면 즉시 종료
         3) HTML 파싱
         """
-
+        video_url = self.BASE_URL + video_id
         print(f"[INFO] 시작: 댓글 수집 (reply 증가량 기반 완전수집) {video_url}")
 
         if self.page.url != video_url:
@@ -114,7 +211,7 @@ class CrawlerEngine:
                 "document.querySelectorAll('ytd-comment-thread-renderer').length"
             )
 
-            for _ in range(5):     # “한 라운드”에서 5번 정도 big scroll
+            for _ in range(3):     # “한 라운드”에서 3번 정도 big scroll
                 await self.page.evaluate("window.scrollBy(0, 1000)")  
                 await asyncio.sleep(0.20)  # 너무 짧게 하면 로딩 타이밍 놓침
 
@@ -124,8 +221,6 @@ class CrawlerEngine:
             new_count = await self.page.evaluate(
                 "document.querySelectorAll('ytd-comment-thread-renderer').length"
             )
-
-            print(f"[SCROLL] thread {new_count}")
 
             if new_count == prev_count:
                 STALL += 1
@@ -308,80 +403,3 @@ class CrawlerEngine:
         if self.playwright:
             await self.playwright.stop()
         print("Playwright 종료 완료.")
-
-async def main():
-    crawler = CrawlerEngine()
-    video_url = "https://www.youtube.com/watch?v=ftQZo7XaTOA&t=1231s" # 테스트 영상 URL
-    
-    try:
-        await crawler.initialize()
-        
-        metadata = await crawler.get_video_metadata(video_url)
-        
-        print("\n--- 영상 메타데이터 ---")
-        print(f"URL: {video_url}")
-        print(f"조회수: {metadata['view_count']}, 댓글 수: {metadata['comment_count']}")
-
-        # 저희의 필터 조건(조회수 100회 이상, 댓글 5개 이상)이 충족되는지 확인한다고 가정
-        if metadata['view_count'] >= 100 and metadata['comment_count'] >= 5:
-            print("\n[조건 충족] 댓글 수집을 시작합니다...")
-            comments = await crawler.extract_comments(video_url)
-            input()
-            if comments:
-                print(f"\n--- 최종 수집된 댓글 ({len(comments)}개) ---")
-                for i, comment in enumerate(comments[:5]):
-                    print(f"ID: {comment['id']}, Parent ID: {comment['parent_id']}, 작성자: {comment['author']}, 좋아요: {comment['likes']}, 작성시간: {comment['created_time']}, 내용: {comment['content'][:30]}...")
-
-                # --- CSV 저장 로직 ---
-                video_id = video_url.split('v=')[-1]
-                collection_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
-                # 스크립트 파일의 위치를 기준으로 프로젝트 루트 경로를 계산
-                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-                
-                # 저장할 파일 경로를 절대 경로로 지정
-                output_path = os.path.join(project_root, "data", "comments_raw.csv")
-                
-                # 저장할 데이터 가공
-                save_data = []
-                for comment in comments:
-                    save_data.append({
-                        'video_id': video_id,
-                        'comment_id': comment['id'],
-                        'parent_comment_id': comment['parent_id'],
-                        'author': comment['author'],
-                        'content': comment['content'],
-                        'likes': comment['likes'],
-                        'created_time': comment['created_time'],
-                        'collection_time': collection_time
-                    })
-
-                # CSV 파일에 저장
-                try:
-                    # 파일 저장 전 디렉터리 존재 확인 및 생성
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-                    with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
-                        # 헤더는 저장할 데이터의 key 값들을 사용
-                        writer = csv.DictWriter(f, fieldnames=save_data[0].keys(), quoting=csv.QUOTE_MINIMAL)
-                        writer.writeheader()
-                        writer.writerows(save_data)
-                    print(f"\n성공: 수집된 댓글 {len(save_data)}개를 '{output_path}'에 저장했습니다.")
-                except Exception as e:
-                    print(f"\n오류: CSV 파일 저장에 실패했습니다. ({e})")
-                # --- CSV 저장 로직 끝 ---
-
-            else:
-                print("\n수집된 댓글이 없습니다.")
-            
-        else:
-            print("\n[조건 미충족] 댓글을 수집하지 않습니다.")
-
-    except Exception as e:
-        print(f"\n치명적인 오류 발생: {e}")
-        
-    finally:
-        await crawler.close()
-
-if __name__ == "__main__":
-    asyncio.run(main())
