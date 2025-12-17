@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주간 작업 보고서 - 2025-12-12</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+/* 1. THE SETUP */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #1e293b; /* Deep Slate Background for the page */
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+  margin: 0;
+  min-height: 100vh;
+  padding: 20px 0;
+  place-items: center;
+  font-family: 'Roboto', 'Noto Sans KR', sans-serif;
+}
+
+.slide-container {
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 60px;
+  position: relative;
+  width: 1280px;
+}
+
+/* 1.1 BACKGROUND DESIGN (Abstract Tech Blue) */
+.slide-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 10% 10%, #eff6ff 0%, transparent 40%),
+              radial-gradient(circle at 90% 90%, #e0f2fe 0%, transparent 40%);
+  z-index: 0;
+}
+
+/* Dark Theme Slides Override */
+.slide-container.dark-theme {
+    background-color: #0f172a;
+    color: #f8fafc;
+}
+.slide-container.dark-theme::before {
+    background: radial-gradient(circle at 90% 10%, #1e293b 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, #172554 0%, transparent 50%);
+}
+
+.slide-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 2. TYPOGRAPHY */
+.slide-container h1,
+.slide-container h2,
+.slide-container h3 {
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.slide-container h1 {
+  color: #1e293b;
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.slide-container.dark-theme h1,
+.slide-container.dark-theme h2,
+.slide-container.dark-theme h3,
+.slide-container.dark-theme p,
+.slide-container.dark-theme li {
+    color: #f1f5f9;
+}
+
+.slide-container .slide-title {
+  color: #0f172a; /* Dark Slate */
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 40px;
+  text-align: left;
+  width: 100%;
+  border-left: 6px solid #3b82f6; /* Accent Blue Bar */
+  padding-left: 20px;
+}
+
+.slide-container.dark-theme .slide-title {
+    color: #f8fafc;
+    border-left-color: #60a5fa;
+}
+
+.slide-container h3 {
+  font-size: 28px;
+  margin-bottom: 15px;
+  color: #334155;
+}
+
+.slide-container p,
+.slide-container li {
+  color: #475569;
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.slide-container ul {
+    margin: 0;
+    padding-left: 25px;
+}
+
+.slide-container li {
+    margin-bottom: 15px;
+}
+
+.subtitle {
+    font-size: 24px;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.slide-container.dark-theme .subtitle {
+    color: #94a3b8;
+}
+
+/* 3. LAYOUTS */
+
+/* Title Slide */
+.title-layout {
+  text-align: center;
+  max-width: 900px;
+}
+.title-layout h1 {
+    font-size: 72px;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.title-layout .subtitle {
+    font-size: 28px;
+    color: #64748b;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 30px;
+    display: inline-block;
+    width: 60%;
+}
+
+/* Section Title */
+.section-title-layout {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+.section-title-layout h2 {
+    font-size: 64px;
+    color: #3b82f6;
+    margin-bottom: 20px;
+}
+.section-title-layout p {
+    font-size: 32px;
+    color: #94a3b8;
+}
+
+/* Content Area Helper */
+.content-area {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Tiled Content */
+.tiled-content {
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  justify-content: center;
+}
+.tile {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 40px 30px;
+  text-align: center;
+  flex: 1;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease;
+}
+.tile .icon {
+    font-size: 48px;
+    color: #3b82f6;
+    margin-bottom: 25px;
+}
+.tile h3 {
+    color: #1e293b;
+}
+
+/* Two Column */
+.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    width: 100%;
+    align-items: center;
+}
+.two-column.tiled {
+    align-items: stretch;
+}
+.two-column.tiled > div {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 40px;
+}
+.two-column.tiled h3 {
+    color: #3b82f6;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+/* Image Wrapper */
+.image-wrapper {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    height: 400px;
+    width: 100%;
+    background: #f1f5f9;
+}
+.image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Default cover */
+}
+.two-column .image-wrapper img {
+    object-fit: cover; /* Use cover for better aesthetic in 50/50 split */
+}
+
+/* Styled Bullet Points */
+.bullet-list {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.bullet-list ul {
+    list-style: none;
+    padding: 0;
+}
+.bullet-list li {
+    background-color: #f8fafc;
+    border-left: 5px solid #3b82f6;
+    padding: 20px 30px;
+    margin-bottom: 20px;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    font-size: 22px;
+}
+.bullet-list li i {
+    color: #3b82f6;
+    font-size: 28px;
+    margin-right: 25px;
+    width: 30px;
+    text-align: center;
+}
+.bullet-list li strong {
+    color: #1e293b;
+    font-weight: 700;
+    margin-right: 10px;
+}
+
+/* Q&A */
+.qa-layout {
+    text-align: center;
+}
+.qa-layout h2 {
+    font-size: 100px;
+    color: #3b82f6;
+    margin-bottom: 40px;
+}
+.qa-layout p {
+    font-size: 32px;
+}
+
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Title Slide -->
+<div class="slide-container" id="slide1">
+    <div class="title-layout">
+        <h1>주간 작업 보고서</h1>
+        <p class="subtitle">데이터베이스 버그 수정 및 안정성 강화<br>2025-12-12</p>
+    </div>
+</div>
+
+<!-- Slide 2: Agenda/Overview -->
+<div class="slide-container" id="slide2">
+    <h2 class="slide-title">주요 진행 상황 요약</h2>
+    <div class="content-area">
+        <div class="tiled-content">
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3>목표: 시스템 안정성</h3>
+                <p>데이터 크롤링 시스템의 신뢰성 확보 및 오류 최소화</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-check-circle"></i></div>
+                <h3>완료: DB 무결성 확보</h3>
+                <p><code>created_time</code> NULL 제약조건 위반 문제 해결 완료</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-code-branch"></i></div>
+                <h3>진행 중: 메타데이터</h3>
+                <p><code>like_count</code> 수집 정확도 개선 및 로직 리팩토링</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 3: Section Title 1 -->
+<div class="slide-container dark-theme" id="slide3">
+    <div class="section-title-layout">
+        <h2>Issue 1: 데이터 무결성</h2>
+        <p><code>created_time</code> NULL 제약조건 위반 해결</p>
+    </div>
+</div>
+
+<!-- Slide 4: The Problem (Issue 1) -->
+<div class="slide-container" id="slide4">
+    <h2 class="slide-title">문제 현상: NULL 제약조건 위반</h2>
+    <div class="content-area">
+        <div class="two-column">
+            <div>
+                <ul style="font-size: 22px; line-height: 1.8;">
+                    <li><strong>오류 발생:</strong> <code>COMMENT_MASTER</code> 테이블에 데이터를 저장하는 과정에서 오류 발생.</li>
+                    <li><strong>원인:</strong> <code>created_time</code> 컬럼은 <code>NOT NULL</code> 제약조건이 설정되어 있으나, <code>NULL</code> 값이 전달됨.</li>
+                    <li><strong>영향:</strong> 데이터베이스 저장 실패로 인한 크롤링 데이터 손실 및 시스템 불안정 야기.</li>
+                </ul>
+            </div>
+            <div class="image-wrapper">
+                <img src="http://googleusercontent.com/image_collection/image_retrieval/1652837778125945601" alt="데이터베이스 오류 및 경고 아이콘 일러스트">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 5: Solution Part 1 (Request Engine) -->
+<div class="slide-container" id="slide5">
+    <h2 class="slide-title">해결 방안 1: 파싱 로직 강화 (Request Engine)</h2>
+    <div class="content-area">
+        <div class="two-column tiled">
+            <div>
+                <h3>상대 시간 파싱 구현</h3>
+                <p>YouTube의 "3일 전"과 같은 상대적 시간 표기를 절대 시간(<code>datetime</code> 객체)으로 변환하는 <code>_parse_relative_time</code> 함수를 신규 구현 및 적용했습니다.</p>
+            </div>
+            <div>
+                <h3>기본값(Fallback) 적용</h3>
+                <p>댓글 생성 시간 정보가 파싱되지 않거나 누락된 경우, 현재 수집 시간(<code>collection_time</code>)을 대체 값으로 사용하여 <code>NULL</code> 전달을 원천 차단했습니다.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 6: Solution Part 2 (DB Manager) -->
+<div class="slide-container" id="slide6">
+    <h2 class="slide-title">해결 방안 2: 근본 원인 제거 (DB Manager)</h2>
+    <div class="content-area">
+        <div class="bullet-list">
+            <ul>
+                <li>
+                    <i class="fa-solid fa-magnifying-glass-bug"></i>
+                    <div>
+                        <strong>하드코딩 오류 발견:</strong>
+                        <code>db_manager.py</code>의 <code>process_comments</code> 함수 내부에서 <code>created_time</code> 컬럼에 강제로 <code>None</code>을 주입하는 코드를 식별했습니다.
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-file-code"></i>
+                    <div>
+                        <strong>코드 수정:</strong>
+                        하드코딩된 <code>None</code> 값을 제거하고, <code>request_engine.py</code>에서 전달받은 올바른 <code>created_time</code> 객체가 저장되도록 수정했습니다.
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <strong>최종 결과:</strong>
+                        데이터베이스 저장 로직이 정상화되었으며, 무결성 오류가 완전히 해결되었습니다.
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 7: Section Title 2 -->
+<div class="slide-container dark-theme" id="slide7">
+    <div class="section-title-layout">
+        <h2>Issue 2: 메타데이터 정확도</h2>
+        <p>동영상 <code>like_count</code> 수집 개선</p>
+    </div>
+</div>
+
+<!-- Slide 8: The Problem & Actions (Issue 2) -->
+<div class="slide-container" id="slide8">
+    <h2 class="slide-title">문제 분석 및 개선 시도</h2>
+    <div class="content-area">
+        <div class="two-column">
+            <div>
+                <ul style="font-size: 22px; line-height: 1.8;">
+                    <li><strong>문제점:</strong> 일부 동영상의 <code>like_count</code>(좋아요 수)가 <code>0</code>으로 수집되거나 부정확함.</li>
+                    <li><strong>UI 구조 분석:</strong> YouTube 최신 <code>ViewModel</code> 구조를 분석하여 데이터 추출 경로(Path)를 재설정했습니다.</li>
+                    <li><strong>리팩토링 시도:</strong> 초기 로딩 데이터와 API 응답 간의 시점 차이를 해결하기 위해 스크래핑 구조 변경을 시도했습니다.</li>
+                </ul>
+            </div>
+            <div class="image-wrapper">
+                <img src="http://googleusercontent.com/image_collection/image_retrieval/12839295459697429512" alt="코드 분석 및 데이터 처리 추상화 이미지">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 9: Current Status (Issue 2) -->
+<div class="slide-container" id="slide9">
+    <h2 class="slide-title">현재 진행 상황 (Status)</h2>
+    <div class="content-area">
+        <div class="bullet-list">
+            <ul>
+                <li>
+                    <i class="fa-solid fa-wrench"></i>
+                    <div>
+                        <strong>오류 수정 완료:</strong>
+                        리팩토링 과정에서 발생했던 <code>NameError</code> 등 문법적 오류는 모두 수정되었습니다.
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i>
+                    <div>
+                        <strong>실행 불안정:</strong>
+                        코드 실행 흐름이 여전히 원활하지 않아 <code>like_count</code>가 완벽하게 수집되지 않는 상태입니다.
+                    </div>
+                </li>
+                <li>
+                    <i class="fa-solid fa-arrow-right-long"></i>
+                    <div>
+                        <strong>향후 계획:</strong>
+                        다음 작업 주기에서 최우선 과제로 선정하여 디버깅을 진행할 예정입니다.
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 10: Conclusion -->
+<div class="slide-container" id="slide10">
+    <h2 class="slide-title">결론 및 다음 단계</h2>
+    <div class="content-area">
+        <div class="two-column tiled">
+            <div>
+                <h3 style="color: #10b981;">성과 (Achievements)</h3>
+                <p><code>created_time</code> 관련 데이터베이스 저장 오류를 해결하여 <strong>데이터 무결성</strong>을 확보했습니다.</p>
+                <p style="margin-top:20px; font-weight:700; color:#059669; font-size: 22px;"><i class="fa-solid fa-server" style="margin-right:10px;"></i>수정 사항 DB 적용 완료</p>
+            </div>
+            <div>
+                <h3 style="color: #f59e0b;">다음 목표 (Next Steps)</h3>
+                <p><strong><code>like_count</code> 수집 로직</strong>에 대한 추가적인 디버깅과 수정을 최우선으로 진행합니다. 메타데이터 수집의 정확도를 높이는 데 집중할 계획입니다.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 11: Demo -->
+<div class="slide-container dark-theme" id="slide11">
+    <div class="section-title-layout">
+        <h2>Live Demo</h2>
+        <p>DB 데이터 적재 및 시스템 시연</p>
+        <div style="margin-top: 50px; font-size: 80px; color: #60a5fa; opacity: 0.8;">
+            <i class="fa-solid fa-laptop-code"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 12: Q&A -->
+<div class="slide-container" id="slide12">
+    <div class="qa-layout">
+        <h2>Q & A</h2>
+        <!-- Subtitle removed as requested -->
+    </div>
+</div>
+
+</body>
+</html>
+```

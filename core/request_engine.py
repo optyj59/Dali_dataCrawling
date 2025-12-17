@@ -2,8 +2,9 @@ import requests
 import json
 import time
 import re
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+import os
 
 
 def search_dict(dic: Any, search_key: str):
@@ -62,16 +63,91 @@ class RequestCommentEngineA:
 
         return ytinit, ytcfg
 
-    def _parse_str_to_int(self, s: str) -> int:
-        """ "조회수 1,234회" 같은 문자열에서 숫자만 뽑아서 int로 변환 """
+    def _parse_yt_number(self, s: str) -> int:
+        """
+        '1,234', '1.23만', '12.3억' 등의 YouTube 형식 숫자를 int로 변환.
+        """
         if not s:
             return 0
         
-        digits = re.findall(r'\d+', s)
-        if not digits:
+        s = s.lower().strip()
+        s = s.replace(',', '')
+
+        # 숫자와 단위를 문자열 어디에서든 찾기 위한 정규표현식
+        match = re.search(r'([\d\.]+)(천|만|억|조)?', s)
+        if not match:
             return 0
+
+        num_part_str = match.group(1)
+        unit_part = match.group(2)
+
+        try:
+            num = float(num_part_str)
+        except ValueError:
+            return 0
+
+        multiplier = 1
+        if unit_part == '천':
+            multiplier = 1_000
+        elif unit_part == '만':
+            multiplier = 10_000
+        elif unit_part == '억':
+            multiplier = 100_000_000
+        elif unit_part == '조':
+            multiplier = 1_000_000_000_000
+
+        return int(num * multiplier)
+
+    # ------------------------------
+    # watch HTML 에서 ytInitialData, ytcfg.set 추출
+    # ------------------------------
+
+    def _parse_relative_time(self, time_str: str) -> datetime:
+        """
+        '3일 전', '1시간 전', '2023. 1. 1.' 등의 시간을 절대 시간으로 변환합니다.
+        """
+        now = datetime.now()
+        time_str = time_str.strip()
+
+        try:
+            if "년 전" in time_str:
+                years = int(re.search(r'(\d+)', time_str).group(1))
+                return now.replace(year=now.year - years)
+            elif "개월 전" in time_str:
+                months = int(re.search(r'(\d+)', time_str).group(1))
+                # 월 계산은 복잡하므로 단순화
+                total_months = now.year * 12 + now.month - months
+                new_year = total_months // 12
+                new_month = total_months % 12 + 1
+                return now.replace(year=new_year, month=new_month)
+            elif "주 전" in time_str:
+                weeks = int(re.search(r'(\d+)', time_str).group(1))
+                return now - timedelta(weeks=weeks)
+            elif "일 전" in time_str:
+                days = int(re.search(r'(\d+)', time_str).group(1))
+                return now - timedelta(days=days)
+            elif "시간 전" in time_str:
+                hours = int(re.search(r'(\d+)', time_str).group(1))
+                return now - timedelta(hours=hours)
+            elif "분 전" in time_str:
+                minutes = int(re.search(r'(\d+)', time_str).group(1))
+                return now - timedelta(minutes=minutes)
+            elif "초 전" in time_str:
+                seconds = int(re.search(r'(\d+)', time_str).group(1))
+                return now - timedelta(seconds=seconds)
+            elif "방금 전" in time_str or "Just now" in time_str:
+                return now
+            else:
+                # '2023. 10. 2.' 와 같은 형식 시도
+                match = re.search(r'(\d{4})\. (\d{1,2})\. (\d{1,2})\.', time_str)
+                if match:
+                    return datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        except (ValueError, AttributeError):
+             # 파싱 실패 시 현재 시간 반환
+            return now
         
-        return int("".join(digits))
+        # 모든 조건에 맞지 않으면 현재 시간 반환
+        return now
 
     # ------------------------------
     # 새 구조의 commentEntityPayload → 표준 dict
@@ -164,13 +240,24 @@ class RequestCommentEngineA:
         reply_level = properties.get("replyLevel", 0)
 
         # --- 작성 시각 ---
-        created_time = properties.get("publishedTime", "")
-        if not created_time:
+        created_time_str = properties.get("publishedTime", "")
+        if not created_time_str:
             # 구구조
             if "publishedTimeText" in entity:
                 pruns = entity["publishedTimeText"].get("runs", [])
                 if pruns:
-                    created_time = pruns[0].get("text", "")
+                    created_time_str = pruns[0].get("text", "")
+        
+        # 상대 시간 문자열을 절대 datetime 객체로 변환
+        created_time = collection_time # 기본값
+        if created_time_str:
+            try:
+                created_time = self._parse_relative_time(created_time_str)
+            except Exception:
+                # 파싱 실패 시 collection_time 사용
+                pass
+
+
 
         return {
             "id": cid,
@@ -232,7 +319,7 @@ class RequestCommentEngineA:
     # ------------------------------
     # 전체 댓글 수집 메인 함수
     # ------------------------------
-    def get_all_comments(self, video_id: str, min_views: int = 0, min_comments: int = 0) -> List[Dict]:
+    def get_all_comments(self, video_id: str, min_views: int = 0, min_comments: int = 0) -> Tuple[Dict, List[Dict]]:
         url = self.BASE_URL + video_id
         print(f"[INFO] 댓글 크롤링 시작: {url}")
 
@@ -243,44 +330,164 @@ class RequestCommentEngineA:
 
         ytinit, ytcfg = self._extract_yt_objects(html)
 
+        # =================================================================
+        # STEP 2: 초기 요청으로 '최신순' 정렬 토큰 확보 (2-step)
+        # =================================================================
+        
+        # 2a. ytInitialData에서 기본 '인기순' 토큰 찾기
+        section = next(search_dict(ytinit.get("contents", {}), "itemSectionRenderer"), None)
+        if not section:
+            print("[ERROR] 초기 댓글 섹션(itemSectionRenderer)을 찾지 못했습니다.")
+            return {}, []
+
+        default_renderer = next(search_dict(section, "continuationItemRenderer"), None)
+        if not default_renderer:
+            print("[ERROR] 초기 토큰(continuationItemRenderer)을 찾지 못했습니다.")
+            return {}, []
+
+        # 2b. '인기순'으로 딱 한 번 요청해서 댓글 UI 데이터 확보
+        print("[INFO] 정렬 메뉴를 얻기 위해 초기 요청(인기순)을 보냅니다...")
+        endpoint = default_renderer["continuationEndpoint"]
+        api_url = "https://www.youtube.com" + endpoint["commandMetadata"]["webCommandMetadata"]["apiUrl"]
+        token = endpoint["continuationCommand"]["token"]
+        
+        payload = {"context": ytcfg["INNERTUBE_CONTEXT"], "continuation": token}
+        resp = self.session.post(api_url, params={"key": ytcfg["INNERTUBE_API_KEY"]}, json=payload, timeout=10)
+        resp.raise_for_status()
+        initial_comment_data = resp.json()
+
+        # ----------------------------------------
+        # 0. 비디오 메타데이터 추출 (API 호출 이후)
+        # API 응답에 최신 정보가 있을 수 있으므로 여기서 추출합니다.
+        # ----------------------------------------
+        primary_info_initial = next(search_dict(ytinit, "videoPrimaryInfoRenderer"), None)
+        primary_info_updated = next(search_dict(initial_comment_data, "videoPrimaryInfoRenderer"), None)
+        primary_info = primary_info_updated or primary_info_initial # 업데이트된 정보가 있으면 그것을 사용
+
+        video_title = ""
+        view_count = 0
+        like_count = 0
+        
+        if primary_info:
+            video_title = primary_info.get("title", {}).get("runs", [{}])[0].get("text", "")
+            
+            view_count_text = (
+                primary_info.get("viewCount", {})
+                .get("videoViewCountRenderer", {})
+                .get("viewCount", {})
+                .get("simpleText", "")
+            )
+            view_count = self._parse_yt_number(view_count_text)
+
+            # 좋아요 수 (ViewModel 우선, Renderer 폴백)
+            # 1. 최신 ViewModel 구조 탐색
+            view_model = next(search_dict(primary_info, "segmentedLikeDislikeButtonViewModel"), None)
+            if view_model:
+                button_view_model = next(search_dict(view_model, "buttonViewModel"), None)
+                if button_view_model:
+                    # 1순위: 'title' 필드 (e.g., "693" 또는 "5.1천")
+                    title_text = button_view_model.get("title", "")
+                    if title_text:
+                        like_count = self._parse_yt_number(title_text)
+
+                    # 2순위: 'accessibilityText' 필드 (대체 텍스트)
+                    if like_count == 0:
+                        accessibility_text = button_view_model.get("accessibilityText", "")
+                        if accessibility_text:
+                            like_count = self._parse_yt_number(accessibility_text)
+
+            # 2. ViewModel 구조가 없는 경우, 이전 Renderer 구조 재시도 (Fallback)
+            if like_count == 0:
+                like_renderer = next(search_dict(primary_info, "segmentedLikeDislikeButtonRenderer"), None)
+                if like_renderer:
+                    tooltip = like_renderer.get("likeButton", {}).get("toggleButtonRenderer", {}).get("defaultTooltip", "")
+                    if tooltip:
+                        like_count = self._parse_yt_number(tooltip)
+
+            # 3. 최후의 보루
+            if like_count == 0:
+                 like_button = next(search_dict(primary_info, "likeButton"), None)
+                 if like_button:
+                    like_text = like_button.get("toggleButtonRenderer", {}).get("defaultText", {}).get("simpleText", "")
+                    like_count = self._parse_yt_number(like_text)
+
+        # 채널 정보 등 나머지 메타데이터 추출 (ytInitialData에서만 가져옴)
+        secondary_info = next(search_dict(ytinit, "videoSecondaryInfoRenderer"), None)
+        channel_title = ""
+        upload_time_str = ""
+        subscriber_count = 0
+        if secondary_info:
+            owner_renderer = secondary_info.get("owner", {}).get("videoOwnerRenderer", {})
+            channel_title = owner_renderer.get("title", {}).get("runs", [{}])[0].get("text", "")
+            upload_time_str = owner_renderer.get("publishedTimeText", {}).get("simpleText", "")
+            subscriber_count_text = owner_renderer.get("subscriberCountText", {}).get("simpleText", "")
+            subscriber_count = self._parse_yt_number(subscriber_count_text)
+
+        upload_time = None
+        try:
+            match = re.search(r'(\d{4})\. (\d{1,2})\. (\d{1,2})\.', upload_time_str)
+            if match:
+                upload_time = datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+            else:
+                # '3개월 전' 같은 상대 시간 처리
+                upload_time = self._parse_relative_time(upload_time_str)
+        except Exception:
+            upload_time = datetime.now()
+
+        video_data = {
+            'video_id': video_id,
+            'video_title': video_title,
+            'channel_title': channel_title,
+            'upload_time': upload_time,
+            'view_count': view_count,
+            'like_count': like_count,
+            'dislike_count': 0,
+            'subscriber_count': subscriber_count,
+            'total_comment_count': 0 # 필터링 후 업데이트 예정
+        }
+
+        # 2c. 반환된 데이터에서 '최신순' 토큰 찾기
+        sort_menu = next(search_dict(initial_comment_data, "sortFilterSubMenuRenderer"), None)
+        newest_first_endpoint = None
+        if sort_menu and 'subMenuItems' in sort_menu:
+            for item in sort_menu['subMenuItems']:
+                if not item.get('selected'): # 'selected=false'인 것이 '최신순'
+                    newest_first_endpoint = item.get('serviceEndpoint')
+                    break
+        
+        # 2d. '최신순' 토큰으로 엔드포인트 리스트 설정
+        if newest_first_endpoint:
+            print("[INFO] '최신순' 정렬 토큰을 성공적으로 찾았습니다. 크롤링을 시작합니다.")
+            endpoints = [newest_first_endpoint]
+        else:
+            print("[ERROR] 초기 응답에서 '최신순' 정렬 옵션을 찾지 못했습니다. 크롤링을 중단합니다.")
+            return video_data, []
+
         # ----------------------------------------
         # 1. 조회수 필터링
         # ----------------------------------------
         if min_views > 0:
-            view_count_str = ""
-            # ytInitialData에서 videoPrimaryInfoRenderer를 탐색
-            primary_info = next(search_dict(ytinit, "videoPrimaryInfoRenderer"), None)
-            if primary_info:
-                view_count_str = (
-                    primary_info.get("viewCount", {})
-                    .get("videoViewCountRenderer", {})
-                    .get("viewCount", {})
-                    .get("simpleText", "")
-                )
-            
-            view_count = self._parse_str_to_int(view_count_str)
             print(f"[INFO] 현재 영상 조회수: {view_count} (필터: {min_views})")
-
             if view_count < min_views:
                 print(f"[WARN] 조회수({view_count})가 설정된 값({min_views})보다 낮아 댓글을 수집하지 않습니다.")
-                return []
-        # ----------------------------------------
+                return video_data, [] # 메타데이터는 반환
 
 
-
-        # 2) 초기 comments continuation endpoint 찾기 (스승님 방식 그대로)
-        section = next(search_dict(ytinit.get("contents", {}), "itemSectionRenderer"), None)
-        renderer = next(search_dict(section, "continuationItemRenderer"), None) if section else None
-
-        if not renderer:
-            print("[WARN] 초기 comments continuationItemRenderer를 찾지 못했습니다.")
-            return []
-
-        endpoints = [renderer["continuationEndpoint"]]
-
+        # =================================================================
+        # STEP 3: '최신순' 토큰으로 본격적인 댓글 수집 시작
+        # =================================================================
         all_comments: List[Dict] = []
         seen_ids = set()
         round_count = 0
+
+        # 첫 요청(2단계)에서 받은 댓글도 수집 대상에 포함
+        initial_comments = self._parse_comments_from_response(initial_comment_data, video_id)
+        print(f"[INFO] 초기 요청에서 댓글 {len(initial_comments)}개 확보")
+        for c in initial_comments:
+            if c["id"] not in seen_ids:
+                seen_ids.add(c["id"])
+                all_comments.append(c)
+
 
         while endpoints:
             round_count += 1
@@ -292,7 +499,7 @@ class RequestCommentEngineA:
             )
             token = endpoint["continuationCommand"]["token"]
 
-            print(f"[INFO] continuation {round_count}: {api_url}")
+            print(f"[INFO] continuation {round_count} (최신순): {api_url[:50]}...")
 
             payload = {
                 "context": ytcfg["INNERTUBE_CONTEXT"],
@@ -330,15 +537,20 @@ class RequestCommentEngineA:
                     if len(runs) > 1: # '댓글 ' + '503' + '개' 구조이므로 2번째 요소(index 1)에 숫자가 있음
                         comment_count_str = runs[1].get("text", "")
                 
-                total_comments = self._parse_str_to_int(comment_count_str)
-                print(f"[INFO] 전체 댓글 수: {total_comments} (필터: {min_comments})")
+                total_comments_from_api = self._parse_yt_number(comment_count_str)
+                print(f"[INFO] 전체 댓글 수: {total_comments_from_api} (필터: {min_comments})")
 
-                if total_comments < min_comments:
-                    print(f"[WARN] 댓글 수({total_comments})가 설정된 값({min_comments})보다 낮아 추가 수집을 중단합니다.")
-                    return all_comments  # 현재까지 수집된 첫 페이지만 반환
+                # video_data에 최종 댓글 수 업데이트
+                video_data['total_comment_count'] = total_comments_from_api
+
+
+                if total_comments_from_api < min_comments:
+                    print(f"[WARN] 댓글 수({total_comments_from_api})가 설정된 값({min_comments})보다 낮아 추가 수집을 중단합니다.")
+                    return video_data, all_comments  # 현재까지 수집된 첫 페이지만 반환
             # ----------------------------------------
 
             # 4) 다음 continuation endpoint 수집 (스승님 로직 스타일)
+            new_endpoints = []
             reload_items = list(search_dict(data, "reloadContinuationItemsCommand"))
             append_items = list(search_dict(data, "appendContinuationItemsAction"))
             actions = reload_items + append_items
@@ -349,19 +561,37 @@ class RequestCommentEngineA:
                     continue
                 for item in action.get("continuationItems", []):
                     for ep in search_dict(item, "continuationEndpoint"):
-                        endpoints.append(ep)
+                        new_endpoints.append(ep)
 
+            if not new_endpoints and not endpoints:
+                print("[WARN] 다음 continuation token을 찾지 못했습니다. 마지막 응답을 'core/logs/last_response.json'에 저장합니다.")
+                os.makedirs('core/logs', exist_ok=True)
+                with open('core/logs/last_response.json', 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+
+            endpoints.extend(new_endpoints)
             time.sleep(0.25)  # 서버 부하 방지용
 
         print(f"[INFO] 최종 댓글 수집 완료: 총 {len(all_comments)}개")
-        return all_comments
+        
+        # video_data에 최종 댓글 수 업데이트
+        video_data['total_comment_count'] = len(all_comments)
 
+        return video_data, all_comments
 
 if __name__ == "__main__":
-    vid = "FbXQmI7IkZg"  # 테스트용
+    vid = "9XKzu4mZZU8"  # 테스트용
     engine = RequestCommentEngineA()
-    comments = engine.get_all_comments(vid, min_views=100, min_comments=5)
+    # comments = engine.get_all_comments(vid, min_views=100, min_comments=5) # 주석 처리 또는 제거
+    
+    # 변경된 반환 타입에 맞게 호출
+    video_data, comments = engine.get_all_comments(vid, min_views=100, min_comments=5)
 
     print(f"\n--- 총 {len(comments)}개 ---")
+    print("\n--- 비디오 메타데이터 ---")
+    for k, v in video_data.items():
+        print(f"{k}: {v}")
+    
+    print("\n--- 첫 10개 댓글 ---")
     for c in comments[:10]:
         print(c)

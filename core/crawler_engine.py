@@ -403,3 +403,16 @@ class CrawlerEngine:
         if self.playwright:
             await self.playwright.stop()
         print("Playwright 종료 완료.")
+
+async def main():
+    engine = CrawlerEngine()
+    await engine.initialize()
+    video_id = "kWiCuklohdY"  # 예시 비디오 ID
+    metadata = await engine.get_video_metadata(video_id)
+    print("Metadata:", metadata)
+    comments = await engine.extract_comments(video_id)
+    print(f"총 댓글 수: {len(comments)}")
+    await engine.close()
+
+if __name__ == "__main__":
+    asyncio.run(main()) 

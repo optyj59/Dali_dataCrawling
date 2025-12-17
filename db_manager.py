@@ -1,40 +1,38 @@
 import psycopg2
-from psycopg2 import extras
-import os
-import sys
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+import traceback
 
-# 프로젝트 루트를 sys.path에 추가하여 config 모듈을 임포트할 수 있도록 함
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
-sys.path.append(project_root)
+# TODO: 자신의 PostgreSQL 서버 설정에 맞게 아래 값을 수정해주세요.
+DB_CONFIG = {
+    "host": "localhost",
+    "database": "postgres",
+    "user": "postgres",
+    "password": "null",
+    "port": "5432"
+}
 
-# config.settings에서 DB 설정 가져오기 (아직 없으면 임시 설정)
-try:
-    from config.settings import DB_CONFIG
-except ImportError:
-    print("경고: config/settings.py에서 DB_CONFIG를 찾을 수 없습니다. 임시 설정을 사용합니다.")
-    DB_CONFIG = {
-        "host": "localhost",
-        "database": "youtube_comments",
-        "user": "your_user",
-        "password": "your_password",
-        "port": "5432"
-    }
+# --- 데이터 구조 정의 (크롤러에서 넘어오는 형태) ---
+VideoData = Dict[str, Any]
+CommentData = List[Dict[str, Any]]
+MetadataData = Dict[str, Any]
+
 
 class DBManager:
+    """데이터베이스 연결 및 여러 테이블에 대한 CRUD 작업을 관리하는 클래스"""
     def __init__(self):
-        self.conn = None
+        """초기화 시 DB 설정을 저장합니다."""
         self.db_config = DB_CONFIG
-        print(f"DBManager 초기화. DB: {self.db_config['database']}")
+        self.conn = None
 
     def connect(self):
         """데이터베이스에 연결합니다."""
         if self.conn is None or self.conn.closed:
             try:
                 self.conn = psycopg2.connect(**self.db_config)
-                self.conn.autocommit = True  # 오토커밋 설정
-                print("데이터베이스 연결 성공.")
             except psycopg2.Error as e:
                 print(f"데이터베이스 연결 오류: {e}")
+                traceback.print_exc()
                 self.conn = None
         return self.conn
 
@@ -43,119 +41,331 @@ class DBManager:
         if self.conn and not self.conn.closed:
             self.conn.close()
             self.conn = None
-            print("데이터베이스 연결 닫힘.")
 
-    def insert_comments_batch(self, comments_data: list[dict]):
+    # -----------------------------------------------------------
+    # [1] KEYWORD_MASTER 처리 (UPSERT)
+    # -----------------------------------------------------------
+    def insert_keyword(self, keyword_text: str) -> int | None:
         """
-        댓글 데이터를 COMMENT_MASTER 테이블에 일괄 삽입(Bulk Insert)합니다.
+        키워드를 KEYWORD_MASTER에 4삽입하거나, 이미 존재하면 last_used_time을 업데이트합니다.
+        성공 시 keyword_id를 반환합니다.
+        """
+        self.connect()
+        if not self.conn:
+            return None
+
+        now = datetime.now()
+        keyword_id = None
+
+        # ON CONFLICT (keyword_text) DO UPDATE: 키워드가 중복될 경우 UPSERT 수행
+        sql = """
+            INSERT INTO KEYWORD_MASTER (keyword_text, last_used_time)
+            VALUES (%s, %s)
+            ON CONFLICT (keyword_text)
+            DO UPDATE SET last_used_time = %s
+            RETURNING keyword_id;
+        """
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql, (keyword_text, now, now))
+                result = cursor.fetchone()
+                if result:
+                    keyword_id = result[0]
+                self.conn.commit()
+                # print(f"키워드 '{keyword_text}' 처리 완료 (ID: {keyword_id}).")
+        except psycopg2.Error as e:
+            print(f"키워드 삽입 오류: {e}")
+            self.conn.rollback()
         
-        comments_data 예시:
-        [
-            {
-                'video_id': 'vid1', 'comment_id': 'cid1', 'author': 'author1',
-                'content': 'content1', 'parent_comment_id': None, 'likes': '10',
-                'created_time': '2023-01-01', 'collection_time': '2023-01-01 10:00:00',
-                'valid_from_time': '2023-01-01 10:00:00', 'valid_to_time': None
-            },
-            ...
-        ]
+        return keyword_id
+
+    # -----------------------------------------------------------
+    # [2] VIDEO_MASTER 처리 (UPSERT)
+    # -----------------------------------------------------------
+    def insert_or_get_video(self, video_data: VideoData):
         """
-        if not comments_data:
-            print("삽입할 댓글 데이터가 없습니다.")
+        VIDEO_MASTER에 영상을 삽입하거나, 이미 존재하면 제목/채널 제목을 업데이트합니다.
+        """
+        sql = """
+            INSERT INTO VIDEO_MASTER (video_id, video_title, channel_title, upload_time)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (video_id)
+            DO UPDATE SET
+                video_title = EXCLUDED.video_title,
+                channel_title = EXCLUDED.channel_title
+            RETURNING video_id;
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(sql, (
+                video_data['video_id'], 
+                video_data['video_title'], 
+                video_data.get('channel_title'), 
+                video_data['upload_time']
+            ))
+            cursor.close()
+            # print(f"  > VIDEO_MASTER 처리 완료: {video_data['video_id']}")
+            return True
+        except psycopg2.Error as e:
+            print(f"영상 마스터 삽입 오류: {e}")
+            raise # 상위 트랜잭션에서 롤백 처리되도록 예외를 발생시킵니다.
+
+    # -----------------------------------------------------------
+    # [3] VIDEO_METADATA_LOG 처리 (단순 INSERT)
+    # -----------------------------------------------------------
+    def insert_video_metadata_log(self, metadata: MetadataData):
+        """
+        VIDEO_METADATA_LOG에 영상 메타데이터 스냅샷을 단순 삽입합니다. (SCD X)
+        """
+        sql = """
+            INSERT INTO VIDEO_METADATA_LOG 
+            (video_id, subscriber_count, view_count, like_count, dislike_count, total_comment_count, collection_time)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(sql, (
+                metadata['video_id'],
+                metadata.get('subscriber_count'),
+                metadata['view_count'],
+                metadata.get('like_count'),
+                metadata.get('dislike_count'),
+                metadata['total_comment_count'],
+                metadata['collection_time']
+            ))
+            cursor.close()
+            # print(f"  > VIDEO_METADATA_LOG 처리 완료")
+            return True
+        except psycopg2.Error as e:
+            print(f"메타데이터 로그 삽입 오류: {e}")
+            raise
+
+    # -----------------------------------------------------------
+    # [4] KEYWORD_VIDEO_MAPPING 처리 (단순 INSERT)
+    # -----------------------------------------------------------
+    def insert_keyword_video_mapping(self, video_id: str, keyword_id: int, collection_time: datetime):
+        """
+        KEYWORD_VIDEO_MAPPING 테이블에 키워드-영상 연결 이력을 삽입합니다.
+        (PK 충돌 발생 시 무시합니다.)
+        """
+        sql = """
+            INSERT INTO KEYWORD_VIDEO_MAPPING (video_id, keyword_id, collection_time)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (video_id, keyword_id, collection_time)
+            DO NOTHING;
+        """
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(sql, (video_id, keyword_id, collection_time))
+            cursor.close()
+            # print(f"  > MAPPING 처리 완료")
+            return True
+        except psycopg2.Error as e:
+            print(f"매핑 테이블 삽입 오류: {e}")
+            raise
+
+    # -----------------------------------------------------------
+    # [5] COMMENT_MASTER 처리 (SCD Type 2 로직)
+    # -----------------------------------------------------------
+    def process_comments(self, video_id: str, comments: List[Dict], collection_time: datetime):
+        """
+        SCD Type 2 로직을 사용하여 COMMENT_MASTER에 댓글을 적재합니다.
+        - 신규 댓글은 INSERT
+        - 내용이 변경된 댓글은 기존 레코드를 마감(valid_to_time)하고 신규 레코드를 INSERT
+        - 변경이 없는 댓글은 무시
+        """
+        if not comments:
             return
 
-        conn = self.connect()
-        if not conn:
-            print("DB 연결 실패로 댓글을 삽입할 수 없습니다.")
-            return
+        cursor = self.conn.cursor()
 
-        # 테이블 스키마에 맞게 필드명 확인 및 조정 필요
-        # 예시 스키마: video_id, comment_id, author, content, parent_comment_id, likes, created_time, collection_time, valid_from_time, valid_to_time
-        columns = comments_data[0].keys()
+        # 1. DB에서 현재 video_id에 해당하는 최신 댓글 레코드(valid_to_time IS NULL)를 가져옴
+        sql_select = "SELECT comment_id, content FROM COMMENT_MASTER WHERE video_id = %s AND valid_to_time IS NULL;"
+        cursor.execute(sql_select, (video_id,))
         
-        # SQL VALUES 절 생성을 위한 플레이스홀더
-        # 예: %s, %s, %s, ...
-        values_placeholder = ','.join(['%s'] * len(columns))
+        db_comments = {}
+        for row in cursor.fetchall():
+            db_comments[row[0]] = row[1]
         
-        # INSERT 문
-        insert_query = f"""
-            INSERT INTO COMMENT_MASTER ({','.join(columns)})
-            VALUES ({values_placeholder})
-            ON CONFLICT (comment_id) DO NOTHING; -- 중복 시 삽입하지 않음 (스키마에 따라 ON CONFLICT 절은 변경될 수 있습니다)
+        # 2. 크롤링된 댓글과 DB 댓글을 비교하여 변경분(Delta)을 찾음
+        comments_to_insert = []
+        comment_ids_to_expire = []
+
+        for c in comments:
+            comment_id = c['id']
+            content = c.get('content', '')
+
+            if comment_id not in db_comments:
+                # 신규 댓글: INSERT 목록에 추가
+                comments_to_insert.append(c)
+            elif content != db_comments[comment_id]:
+                # 내용이 변경된 댓글: 만료 목록과 INSERT 목록에 모두 추가
+                comment_ids_to_expire.append(comment_id)
+                comments_to_insert.append(c)
+        
+        print(f"  > COMMENT_MASTER: 신규 {len(comments_to_insert) - len(comment_ids_to_expire)}개, 수정 {len(comment_ids_to_expire)}개 댓글 처리")
+
+        # 3. 내용이 변경된 기존 레코드를 마감 처리 (UPDATE)
+        if comment_ids_to_expire:
+            sql_expire = "UPDATE COMMENT_MASTER SET valid_to_time = %s WHERE video_id = %s AND comment_id = ANY(%s) AND valid_to_time IS NULL;"
+            cursor.execute(sql_expire, (collection_time, video_id, comment_ids_to_expire))
+
+        # 4. 신규 및 변경된 레코드를 일괄 삽입 (Bulk INSERT)
+        if comments_to_insert:
+            sql_insert = """
+                INSERT INTO COMMENT_MASTER (
+                    comment_id, video_id, user_name, content, parent_comment_id,
+                    created_time, collection_time, valid_from_time, valid_to_time
+                ) VALUES %s;
+            """
+            
+            # created_time 파싱 (예: "3개월 전" -> datetime)
+            # 현재는 단순화를 위해 created_time을 None으로 처리, 추후 파싱 로직 추가 가능
+            
+            insert_data = [
+                (
+                    c['id'], video_id, c.get('author'), c.get('content'), c.get('parent_id'),
+                    c.get('created_time'), # 파싱된 datetime 객체 사용
+                    collection_time, collection_time, None
+                ) for c in comments_to_insert
+            ]
+            
+            from psycopg2.extras import execute_values
+            execute_values(cursor, sql_insert, insert_data)
+
+        cursor.close()
+
+    # -----------------------------------------------------------
+    # [MAIN TRANSACTION] 모든 테이블을 아우르는 메인 트랜잭션 함수
+    # -----------------------------------------------------------
+    def process_full_data_transaction(self, video_data: VideoData, keyword_id: int, comments: List[Dict]):
         """
-        
-        # 데이터를 튜플 리스트로 변환
-        data_to_insert = [tuple(comment[col] for col in columns) for comment in comments_data]
+        단일 비디오에 대한 모든 데이터(Master, Metadata, Mapping, Comments)를 단일 트랜잭션으로 처리합니다.
+        """
+        self.connect()
+        if not self.conn:
+            print("DB 연결 실패로 트랜잭션 중단.")
+            return False
+
+        current_time = datetime.now()
+        video_id = video_data['video_id']
+
+        # [Debug] request_engine에서 받은 like_count 값을 로그로 출력
+        received_like_count = video_data.get('like_count', 'KEY_NOT_FOUND')
+        print(f"  > [Debug] Received like_count for video {video_id}: {received_like_count}")
+
+        # 메타데이터 구조 (로그 테이블용)
+        metadata_log = {
+            'video_id': video_id,
+            'subscriber_count': video_data.get('subscriber_count'),
+            'view_count': video_data.get('view_count', 0),
+            'like_count': video_data.get('like_count'),
+            'dislike_count': video_data.get('dislike_count'),
+            'total_comment_count': video_data.get('total_comment_count', 0),
+            'collection_time': current_time 
+        }
 
         try:
-            with conn.cursor() as cursor:
-                extras.execute_values(cursor, insert_query, data_to_insert, page_size=1000)
-            print(f"{len(comments_data)}개의 댓글 데이터를 COMMENT_MASTER에 성공적으로 일괄 삽입했습니다.")
-        except psycopg2.Error as e:
-            print(f"댓글 데이터 일괄 삽입 오류: {e}")
-            conn.rollback() # 오류 발생 시 롤백 (autocommit=True 일 경우 불필요할 수 있지만 안전을 위해)
+            print(f"\n[트랜잭션 시작] 영상 ID: {video_id}, 키워드 ID: {keyword_id}")
+            
+            # 1. VIDEO_MASTER (UPSERT)
+            self.insert_or_get_video(video_data)
+
+            # 2. VIDEO_METADATA_LOG (INSERT)
+            self.insert_video_metadata_log(metadata_log)
+
+            # 3. KEYWORD_VIDEO_MAPPING (INSERT)
+            self.insert_keyword_video_mapping(video_id, keyword_id, current_time)
+
+            # 4. COMMENT_MASTER (SCD Type 2)
+            self.process_comments(video_id, comments, current_time)
+
+            # 모든 작업 성공 시 커밋
+            self.conn.commit()
+            print(f" 트랜잭션 성공: 모든 데이터가 DB에 안전하게 저장되었습니다.")
+            return True
+
+        except Exception as e:
+            print(f" 트랜잭션 오류 발생: {e}")
+            self.conn.rollback() # 오류 발생 시 모든 변경사항 롤백
+            print(" 롤백 완료: 데이터 일관성을 유지했습니다.")
+            return False
         finally:
-            self.close() # 작업 후 연결 닫기 (또는 커넥션 풀 사용 시 반환)
+            self.close()
 
-# 이 파일이 직접 실행될 때 테스트를 위한 코드 (스케폴딩)
+
 if __name__ == "__main__":
-    print("DBManager 테스트 시작...")
-    db_manager = DBManager()
-
-    # 테스트 데이터 (실제 댓글 데이터 구조와 일치해야 합니다)
-    test_comments = [
-        {
-            'video_id': 'test_video_1',
-            'comment_id': 'test_comment_1',
-            'author': 'TestUser1',
-            'content': 'This is a test comment 1.',
-            'parent_comment_id': None,
-            'likes': '5',
-            'created_time': '2023-11-25',
-            'collection_time': '2023-11-25 12:00:00',
-            'valid_from_time': '2023-11-25 12:00:00',
-            'valid_to_time': None
-        },
-        {
-            'video_id': 'test_video_1',
-            'comment_id': 'test_comment_2',
-            'author': 'TestUser2',
-            'content': 'This is a test comment 2, a reply.',
-            'parent_comment_id': 'test_comment_1',
-            'likes': '2',
-            'created_time': '2023-11-25',
-            'collection_time': '2023-11-25 12:01:00',
-            'valid_from_time': '2023-11-25 12:01:00',
-            'valid_to_time': None
-        }
+    print("DBManager 트랜잭션 테스트를 시작합니다...")
+    
+    # ----------------------------------------
+    # A. 테스트 데이터 (크롤러에서 넘어온다고 가정)
+    # ----------------------------------------
+    test_time = datetime.now().replace(microsecond=0)
+    
+    # 1. 영상 마스터 데이터
+    test_video_data = {
+        'video_id': 'TestVideoSCD',
+        'video_title': 'PostgreSQL SCD Type 2 마스터 강좌',
+        'channel_title': '데이터웨어하우스 스튜디오',
+        'upload_time': datetime(2023, 1, 15),
+        'subscriber_count': 1000,
+        'view_count': 150000,
+        'like_count': 5000,
+        'dislike_count': 10,
+        'total_comment_count': 3
+    }
+    
+    # 2. 댓글 데이터 (1차 수집)
+    test_comments_1 = [
+        {'id': 'CommentA', 'content': '정말 유익해요!', 'author': '김수강'},
+        {'id': 'CommentB', 'content': '이해가 잘 안가네요.', 'author': '이초보'},
+        {'id': 'CommentC', 'content': '최고의 강의입니다.', 'author': '박고수'},
     ]
-
-    # COMMENT_MASTER 테이블이 없으면 생성하는 예시 (실제 운영 환경에서는 DDL은 따로 관리)
+    
+    test_keyword_text = "SCD Type 2"
+    
+    db_manager = DBManager()
+    
     try:
-        conn = db_manager.connect()
-        if conn:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS COMMENT_MASTER (
-                        video_id VARCHAR(255) NOT NULL,
-                        comment_id VARCHAR(255) PRIMARY KEY,
-                        author VARCHAR(255),
-                        content TEXT,
-                        parent_comment_id VARCHAR(255),
-                        likes VARCHAR(50),
-                        created_time VARCHAR(255),
-                        collection_time TIMESTAMP WITH TIME ZONE,
-                        valid_from_time TIMESTAMP WITH TIME ZONE,
-                        valid_to_time TIMESTAMP WITH TIME ZONE
-                    );
-                """)
-            print("COMMENT_MASTER 테이블 존재 확인 또는 생성 완료.")
+        # --- 1차 실행: 신규 데이터 삽입 ---
+        print("\n--- 1차 실행: 모든 데이터 신규 삽입 ---")
+        keyword_id = db_manager.insert_keyword(test_keyword_text)
+        
+        if keyword_id:
+            success = db_manager.process_full_data_transaction(
+                video_data=test_video_data,
+                keyword_id=keyword_id,
+                comments=test_comments_1
+            )
+            if success:
+                print(f"[성공 결과] 1차 데이터가 DB에 저장되었습니다.")
+            else:
+                raise Exception("1차 실행 트랜잭션 실패")
+
+        # --- 2차 실행: 댓글 변경분 처리 (SCD Type 2 테스트) ---
+        print("\n--- 2차 실행: 댓글 변경분(신규/수정/유지) 처리 ---")
+        
+        # CommentA: 내용 변경
+        # CommentB: 내용 유지
+        # CommentD: 신규 추가
+        test_comments_2 = [
+            {'id': 'CommentA', 'content': '정말 유익해요! 구독했습니다!', 'author': '김수강'},
+            {'id': 'CommentB', 'content': '이해가 잘 안가네요.', 'author': '이초보'},
+            {'id': 'CommentD', 'content': '새로운 댓글입니다.', 'author': '최신입'},
+        ]
+        
+        if keyword_id:
+            success = db_manager.process_full_data_transaction(
+                video_data=test_video_data, # 메타데이터는 동일
+                keyword_id=keyword_id,
+                comments=test_comments_2
+            )
+            if success:
+                print(f"[성공 결과] 2차 변경 데이터(신규1, 수정1, 유지1)가 DB에 반영되었습니다.")
+                print("DB에서 CommentA는 2개(이전/현재), B는 1개, C는 1개(마감안됨), D는 1개의 레코드를 가져야 합니다.")
+
     except Exception as e:
-        print(f"테이블 생성 오류: {e}")
+        print(f"테스트 중 예상치 못한 오류: {e}")
+        
     finally:
-        db_manager.close() # 테이블 생성 후 연결 닫기
-    
-    # 댓글 데이터 삽입 테스트
-    db_manager.insert_comments_batch(test_comments)
-    
-    print("DBManager 테스트 완료.")
+        print("\n테스트 종료.")

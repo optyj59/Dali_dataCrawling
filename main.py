@@ -8,6 +8,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 sys.path.append(project_root)
 
 from workers.worker_runner import worker_process_entry
+from db_manager import DBManager
 
 # search_engine 개발 완료 시 주석 해제
 from core.search_engine import YouTubeSearcher
@@ -20,13 +21,22 @@ def main():
 
     keyword = input("검색할 유튜브 영상의 키워드를 입력하세요: ") # 사용자에게 키워드 입력 요청
 
-    target_engine = ""
-    while target_engine not in ["requests", "playwright"]:
-        target_engine = input("사용할 크롤러 엔진을 선택하세요 (requests/playwright): ").lower()
-        if target_engine not in ["requests", "playwright"]:
-            print("잘못된 입력입니다. 'requests' 또는 'playwright' 중에서 선택해주세요.")
+    # --- DB 저장 로직 (1단계): 키워드 저장 ---
+    db_manager = DBManager()
+    keyword_id = db_manager.insert_keyword(keyword)
+    # 메인 프로세스에서 사용한 DBManager는 키워드 삽입 후 역할을 다했으므로 연결을 닫아줍니다.
+    # 각 워커 프로세스는 자신만의 DBManager 인스턴스를 생성하여 사용하게 됩니다.
+    db_manager.close() 
 
-    target_crawl_count = 10
+    if keyword_id is None:
+        print("데이터베이스에 키워드를 저장하는 데 실패했습니다. 프로그램을 종료합니다.")
+        return
+    print(f"키워드 '{keyword}'가 데이터베이스에 저장되었습니다 (ID: {keyword_id}).")
+
+    target_engine = "requests" # Playwright 엔진을 사용하지 않으므로 requests로 고정
+    print(f"크롤러 엔진이 '{target_engine}'으로 고정되었습니다.")
+
+    target_crawl_count = 1
     
     # 1. 생산자: URL 후보 목록 확보
     searcher = YouTubeSearcher()
@@ -43,10 +53,10 @@ def main():
 
     print(f"총 {len(videos_data)}개의 영상을 대상으로 크롤링을 시작합니다.")
 
-    # 3. 소비자: 병렬 처리를 위한 작업 목록 준비
-    tasks_args = [(video['video_id'], target_engine) for video in videos_data]
+    # 3. 소비자: 병렬 처리를 위한 작업 목록 준비 (keyword_id 추가)
+    tasks_args = [(video['video_id'], target_engine, keyword_id) for video in videos_data]
     
-    num_processes = min(len(videos_data), os.cpu_count(), 4) # 프로세스 수 최대 4개로 조정
+    num_processes = min(len(videos_data), os.cpu_count(), 1) # 프로세스 수 최대 4개로 조정
     print(f"총 {len(videos_data)}개의 영상을 {num_processes}개의 프로세스로 병렬 크롤링합니다.")
     print(f"사용 엔진: {target_engine}")
 
