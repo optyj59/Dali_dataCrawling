@@ -468,9 +468,12 @@ class RequestCommentEngineA:
         # ----------------------------------------
         if min_views > 0:
             print(f"[INFO] 현재 영상 조회수: {view_count} (필터: {min_views})")
+            '''
             if view_count < min_views:
                 print(f"[WARN] 조회수({view_count})가 설정된 값({min_views})보다 낮아 댓글을 수집하지 않습니다.")
                 return video_data, [] # 메타데이터는 반환
+            '''
+            
 
 
         # =================================================================
@@ -549,7 +552,7 @@ class RequestCommentEngineA:
                     return video_data, all_comments  # 현재까지 수집된 첫 페이지만 반환
             # ----------------------------------------
 
-            # 4) 다음 continuation endpoint 수집 (스승님 로직 스타일)
+            # 4) 다음 continuation endpoint 수집 
             new_endpoints = []
             reload_items = list(search_dict(data, "reloadContinuationItemsCommand"))
             append_items = list(search_dict(data, "appendContinuationItemsAction"))
@@ -580,7 +583,7 @@ class RequestCommentEngineA:
         return video_data, all_comments
 
 if __name__ == "__main__":
-    vid = "9XKzu4mZZU8"  # 테스트용
+    vid = "yG17BZQHh8I"  # 테스트용
     engine = RequestCommentEngineA()
     # comments = engine.get_all_comments(vid, min_views=100, min_comments=5) # 주석 처리 또는 제거
     

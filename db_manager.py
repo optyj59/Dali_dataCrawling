@@ -8,7 +8,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "postgres",
     "user": "postgres",
-    "password": "null",
+    "password": "!pearl0605",
     "port": "5432"
 }
 
@@ -29,7 +29,7 @@ class DBManager:
         """데이터베이스에 연결합니다."""
         if self.conn is None or self.conn.closed:
             try:
-                self.conn = psycopg2.connect(**self.db_config)
+                self.conn = psycopg2.connect(client_encoding='UTF8', **self.db_config)
             except psycopg2.Error as e:
                 print(f"데이터베이스 연결 오류: {e}")
                 traceback.print_exc()
