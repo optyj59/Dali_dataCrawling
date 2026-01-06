@@ -1,5 +1,6 @@
 {
     "responseContext": {
+        "visitorData": "CgtIRHNHcVRzR1JnQSju-PPKBjIKCgJLUhIEGgAgSIIB3wKJtCV84rNTIuv9zKnQ0Moi0zY3_hkEvPMopReULQphhhiABj2OlFQQBpUCwQyfME1kPzzk1jbGe_1wLZLrW5vcAAGSsuOqEL7uoseH9PndVXmi2rPpCNE_tXXz_5hCoA2UuyPNUfiKbSe0bVvNUXsnpF7iiDbcHKVY1ZPGlyshfbJ53o_MmPMYNbUGxDJtEq4Kzz_OP6UO4XILNFLbBj94xXe3tR-JXNaEMuMoJp6auRRbxfGbNqHUt05D3NB1GPkelW7ZQr4fBPov70AbOs2b-9WxJrioEthAu7eUt9A9i2BvuOS9NJ3UFt5QMYizjMUqW0v3KqZCwnu3c5w4gIulK8dDEYJ3Rl-lXW3X2k2do9tmf7XGir2AhQI98Ip2q8OO9o-7Ipy_jZU6o2bXPp_eOivXw-tS3GNbNkN_5FvAF5BF4uYFDP87jQHCKYDMM3BOYOjBroxhr80vnSViuxc%3D",
         "serviceTrackingParams": [
             {
                 "service": "CSI",
@@ -18,7 +19,7 @@
                     },
                     {
                         "key": "GetWatchWebReplies_rid",
-                        "value": "0xe7615869935de52f"
+                        "value": "0x683c6ebe4ee42d01"
                     }
                 ]
             },
@@ -31,7 +32,7 @@
                     },
                     {
                         "key": "visitor_data",
-                        "value": "CgthaG5ybWdnSG55USjV7PPKBjIKCgJLUhIEGgAgIA%3D%3D"
+                        "value": "CgtIRHNHcVRzR1JnQSjp-PPKBjIKCgJLUhIEGgAgSA%3D%3D"
                     }
                 ]
             },
@@ -60,7 +61,7 @@
         ],
         "mainAppWebResponseContext": {
             "loggedOut": true,
-            "trackingParam": "kx_fmPxhoPZR3n64QGek03EwPjOwc7tgvu04XoVPctoOb4HRgkussh7BwOcCE59TDtslLKPQ-SS"
+            "trackingParam": "kx_fmPxhoPZRGGSjU3bnL5QQUln6sReHc0AaUMWU0wYw87HRgkussh7BwOcCE59TDtslLKPQ-SS"
         },
         "webResponseContextExtensionData": {
             "webResponseContextPreloadData": {
@@ -74,31 +75,31 @@
             "hasDecorated": true
         }
     },
-    "trackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU6CARUiEwjQuIDu6_aRAxXjc_UFHaukILI=",
+    "trackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI6CARUiEwiA1u7T8faRAxXtUfUHHReoKDg=",
     "onResponseReceivedEndpoints": [
         {
-            "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+            "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
             "appendContinuationItemsAction": {
                 "continuationItems": [
                     {
                         "commentThreadRenderer": {
-                            "trackingParams": "CAYQwnUYCiITCLvu8u_r9pEDFSM2ewcdIPspTg==",
+                            "trackingParams": "CAYQwnUYCiITCKKLqtbx9pEDFQpL9QUd7V0sjg==",
                             "renderingPriority": "RENDERING_PRIORITY_UNKNOWN",
                             "isModeratedElqComment": false,
                             "commentViewModel": {
                                 "commentViewModel": {
-                                    "commentKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICgoAQ%3D%3D",
+                                    "commentKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICgoAQ%3D%3D",
                                     "sharedKey": "EgAgKygB",
-                                    "toolbarStateKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICwoAQ%3D%3D",
-                                    "toolbarSurfaceKey": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIEYoAQ%3D%3D",
-                                    "commentId": "UgwX5OMsI3HFMEK1Imx4AaABAg.A3eiLBJlWZgA4R5L0WYA_z",
-                                    "commentSurfaceKey": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIE8oAQ%3D%3D",
+                                    "toolbarStateKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICwoAQ%3D%3D",
+                                    "toolbarSurfaceKey": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIEYoAQ%3D%3D",
+                                    "commentId": "UgwwjBXe6YStbu2RYMF4AaABAg.9irCmpl4HLm9irwizUQWmh",
+                                    "commentSurfaceKey": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIE8oAQ%3D%3D",
                                     "sharedSurfaceKey": "EhVWSUVXSU5HX0NPTlRFWFRfV0FUQ0gg9AIoAQ%3D%3D",
                                     "inlineRepliesKey": "empty_inline_replies",
                                     "rendererContext": {
                                         "loggingContext": {
                                             "loggingDirectives": {
-                                                "trackingParams": "CAcQtnUiEwi77vLv6_aRAxUjNnsHHSD7KU4=",
+                                                "trackingParams": "CAcQtnUiEwiii6rW8faRAxUKS_UFHe1dLI4=",
                                                 "visibility": {
                                                     "types": "12"
                                                 },
@@ -109,7 +110,7 @@
                                 }
                             },
                             "loggingDirectives": {
-                                "trackingParams": "CAYQwnUYCiITCLvu8u_r9pEDFSM2ewcdIPspTg==",
+                                "trackingParams": "CAYQwnUYCiITCKKLqtbx9pEDFQpL9QUd7V0sjg==",
                                 "visibility": {
                                     "types": "12"
                                 }
@@ -117,7 +118,7 @@
                         }
                     }
                 ],
-                "targetId": "comment-replies-item-UgwX5OMsI3HFMEK1Imx4AaABAg"
+                "targetId": "comment-replies-item-UgwwjBXe6YStbu2RYMF4AaABAg"
             }
         }
     ],
@@ -125,70 +126,71 @@
         "entityBatchUpdate": {
             "mutations": [
                 {
-                    "entityKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICgoAQ%3D%3D",
+                    "entityKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICgoAQ%3D%3D",
                     "type": "ENTITY_MUTATION_TYPE_REPLACE",
                     "payload": {
                         "commentEntityPayload": {
-                            "key": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICgoAQ%3D%3D",
+                            "key": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICgoAQ%3D%3D",
                             "properties": {
-                                "commentId": "UgwX5OMsI3HFMEK1Imx4AaABAg.A3eiLBJlWZgA4R5L0WYA_z",
+                                "commentId": "UgwwjBXe6YStbu2RYMF4AaABAg.9irCmpl4HLm9irwizUQWmh",
                                 "content": {
-                                    "content": "개소리하네 ㅋㅋ 감독이 저 기본적인걸 어떻게 모름"
+                                    "content": "시간이 나는대로 다루도록 하겠습니다!\n아마 내년 1~2 월 사이에 할 듯 합니다!"
                                 },
-                                "publishedTime": "1년 전",
+                                "publishedTime": "3년 전",
                                 "replyLevel": 1,
-                                "authorButtonA11y": "@SsapSorry",
-                                "toolbarStateKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICwoAQ%3D%3D",
-                                "translateButtonEntityKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96IP8BKAE%3D"
+                                "authorButtonA11y": "@농알멋",
+                                "toolbarStateKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICwoAQ%3D%3D",
+                                "translateButtonEntityKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oIP8BKAE%3D"
                             },
                             "author": {
-                                "channelId": "UCMdp861fCJMGFDssSu6lX4Q",
-                                "displayName": "@SsapSorry",
-                                "avatarThumbnailUrl": "https://yt3.ggpht.com/FzaUAarXWWV85weFWh7TY-CCxnVEuaw0TRX_kLbxbBLmdl29-hk7x75US8VFf4InPhXYmLrR=s88-c-k-c0x00ffffff-no-rj",
-                                "isVerified": false,
+                                "channelId": "UCV1ppm1yFoo4PC6LfN1Lkrw",
+                                "displayName": "@농알멋",
+                                "avatarThumbnailUrl": "https://yt3.ggpht.com/4yblZONDTph43oftczjiasFukKBOHKZ5iAndgIIZPMkpgClyqSlVyDVhtFl549LWtd7swm8A=s88-c-k-c0x00ffffff-no-rj",
+                                "isVerified": true,
                                 "isCurrentUser": false,
-                                "isCreator": false,
+                                "isCreator": true,
                                 "channelCommand": {
                                     "innertubeCommand": {
-                                        "clickTrackingParams": "CAQQtnUY____________ASITCLvu8u_r9pEDFSM2ewcdIPspTsoBBN2jxsc=",
+                                        "clickTrackingParams": "CAQQtnUY____________ASITCKKLqtbx9pEDFQpL9QUd7V0sjsoBBAM0Y84=",
                                         "commandMetadata": {
                                             "webCommandMetadata": {
-                                                "url": "/@SsapSorry",
+                                                "url": "/@%EB%86%8D%EC%95%8C%EB%A9%8B",
                                                 "webPageType": "WEB_PAGE_TYPE_CHANNEL",
                                                 "rootVe": 3611,
                                                 "apiUrl": "/youtubei/v1/browse"
                                             }
                                         },
                                         "browseEndpoint": {
-                                            "browseId": "UCMdp861fCJMGFDssSu6lX4Q",
-                                            "canonicalBaseUrl": "/@SsapSorry"
+                                            "browseId": "UCV1ppm1yFoo4PC6LfN1Lkrw",
+                                            "canonicalBaseUrl": "/@%EB%86%8D%EC%95%8C%EB%A9%8B"
                                         }
                                     }
                                 },
+                                "innerBadgeA11y": "@농알멋, 확인된 사용자",
                                 "isArtist": false
                             },
                             "toolbar": {
-                                "likeCountLiked": "2",
-                                "likeCountNotliked": "1",
+                                "likeCountLiked": "1",
+                                "likeCountNotliked": " ",
                                 "replyCount": "",
-                                "creatorThumbnailUrl": "https://yt3.ggpht.com/bLbCLv2C1ZVAU869AyyJx2Q6XXbCyqzC3MSDAcH1y-HWPtcIGPy8XYC2kcZKpzFqfCZ499_hjw=s88-c-k-c0x00ffffff-no-rj",
-                                "likeButtonA11y": "나와 사용자 1명이 이 답글을 좋아함",
+                                "creatorThumbnailUrl": "https://yt3.ggpht.com/4yblZONDTph43oftczjiasFukKBOHKZ5iAndgIIZPMkpgClyqSlVyDVhtFl549LWtd7swm8A=s88-c-k-c0x00ffffff-no-rj",
+                                "likeButtonA11y": "나와 사용자 0명이 이 답글을 좋아함",
                                 "engagementToolbarStyle": {
                                     "value": "ENGAGEMENT_TOOLBAR_STYLE_VALUE_DEFAULT"
                                 },
-                                "likeCountA11y": "좋아요 1개",
+                                "likeCountA11y": "좋아요 0개",
                                 "replyCountA11y": "답글 0개",
                                 "likeInactiveTooltip": "좋아요",
                                 "likeActiveTooltip": "좋아요 취소",
                                 "dislikeInactiveTooltip": "싫어요",
                                 "dislikeActiveTooltip": "싫어요 표시 삭제",
-                                "heartActiveTooltip": "@leestartv님의 ❤"
+                                "heartActiveTooltip": "@농알멋님의 ❤"
                             },
                             "avatar": {
                                 "image": {
                                     "sources": [
                                         {
-                                            "url": "https://yt3.ggpht.com/FzaUAarXWWV85weFWh7TY-CCxnVEuaw0TRX_kLbxbBLmdl29-hk7x75US8VFf4InPhXYmLrR=s88-c-k-c0x00ffffff-no-rj",
+                                            "url": "https://yt3.ggpht.com/4yblZONDTph43oftczjiasFukKBOHKZ5iAndgIIZPMkpgClyqSlVyDVhtFl549LWtd7swm8A=s88-c-k-c0x00ffffff-no-rj",
                                             "width": 88,
                                             "height": 88
                                         }
@@ -199,30 +201,30 @@
                                         }
                                     }
                                 },
-                                "accessibilityText": "@SsapSorry",
+                                "accessibilityText": "@농알멋",
                                 "avatarImageSize": "AVATAR_SIZE_XXS",
                                 "endpoint": {
                                     "innertubeCommand": {
-                                        "clickTrackingParams": "CAQQtnUY____________ASITCLvu8u_r9pEDFSM2ewcdIPspTsoBBN2jxsc=",
+                                        "clickTrackingParams": "CAQQtnUY____________ASITCKKLqtbx9pEDFQpL9QUd7V0sjsoBBAM0Y84=",
                                         "commandMetadata": {
                                             "webCommandMetadata": {
-                                                "url": "/@SsapSorry",
+                                                "url": "/@%EB%86%8D%EC%95%8C%EB%A9%8B",
                                                 "webPageType": "WEB_PAGE_TYPE_CHANNEL",
                                                 "rootVe": 3611,
                                                 "apiUrl": "/youtubei/v1/browse"
                                             }
                                         },
                                         "browseEndpoint": {
-                                            "browseId": "UCMdp861fCJMGFDssSu6lX4Q",
-                                            "canonicalBaseUrl": "/@SsapSorry"
+                                            "browseId": "UCV1ppm1yFoo4PC6LfN1Lkrw",
+                                            "canonicalBaseUrl": "/@%EB%86%8D%EC%95%8C%EB%A9%8B"
                                         }
                                     }
                                 }
                             },
                             "readMoreLogging": {
-                                "trackingParams": "CAUQr7QGIhMIu-7y7-v2kQMVIzZ7Bx0g-ylO",
+                                "trackingParams": "CAUQr7QGIhMIoouq1vH2kQMVCkv1BR3tXSyO",
                                 "loggingDirectives": {
-                                    "trackingParams": "CAUQr7QGIhMIu-7y7-v2kQMVIzZ7Bx0g-ylO",
+                                    "trackingParams": "CAUQr7QGIhMIoouq1vH2kQMVCkv1BR3tXSyO",
                                     "visibility": {
                                         "types": "12"
                                     }
@@ -230,24 +232,24 @@
                             },
                             "threadLines": {},
                             "loggingDirectives": {
-                                "trackingParams": "CAQQtnUY____________ASITCLvu8u_r9pEDFSM2ewcdIPspTg==",
+                                "trackingParams": "CAQQtnUY____________ASITCKKLqtbx9pEDFQpL9QUd7V0sjg==",
                                 "visibility": {
                                     "types": "12"
                                 },
                                 "clientVeSpec": {
                                     "uiType": 15030,
-                                    "veCounter": 653462996
+                                    "veCounter": 517198896
                                 }
                             }
                         }
                     }
                 },
                 {
-                    "entityKey": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIE8oAQ%3D%3D",
+                    "entityKey": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIE8oAQ%3D%3D",
                     "type": "ENTITY_MUTATION_TYPE_REPLACE",
                     "payload": {
                         "commentSurfaceEntityPayload": {
-                            "key": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIE8oAQ%3D%3D",
+                            "key": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIE8oAQ%3D%3D",
                             "inlineReadMoreButton": {
                                 "isExpanded": false
                             },
@@ -255,48 +257,48 @@
                             "composerDraftEntityKey": "N/A",
                             "publishedTimeCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
                                     "commandMetadata": {
                                         "webCommandMetadata": {
-                                            "url": "/watch?v=5tUcBYFQlQ0&lc=UgwX5OMsI3HFMEK1Imx4AaABAg.A3eiLBJlWZgA4R5L0WYA_z",
+                                            "url": "/watch?v=B3jWVjmWL78&lc=UgwwjBXe6YStbu2RYMF4AaABAg.9irCmpl4HLm9irwizUQWmh",
                                             "webPageType": "WEB_PAGE_TYPE_WATCH",
                                             "rootVe": 3832
                                         }
                                     },
                                     "watchEndpoint": {
-                                        "videoId": "5tUcBYFQlQ0",
-                                        "params": "ejFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ogIDwAEA"
+                                        "videoId": "B3jWVjmWL78",
+                                        "params": "ejFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oogIDwAEA"
                                     }
                                 }
                             },
                             "logTapCommand": {
                                 "logGestureCommand": {
                                     "gestureType": "GESTURE_EVENT_TYPE_LOG_GENERIC_CLICK",
-                                    "trackingParams": "CAMQtnUiEwi77vLv6_aRAxUjNnsHHSD7KU4="
+                                    "trackingParams": "CAMQtnUiEwiii6rW8faRAxUKS_UFHe1dLI4="
                                 }
                             }
                         }
                     }
                 },
                 {
-                    "entityKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96IP8BKAE%3D",
+                    "entityKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oIP8BKAE%3D",
                     "type": "ENTITY_MUTATION_TYPE_REPLACE",
                     "payload": {
                         "triStateButtonStateEntityPayload": {
-                            "key": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96IP8BKAE%3D",
+                            "key": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oIP8BKAE%3D",
                             "stateIdentifier": "TRI_STATE_IDENTIFIER_UNTOGGLED_STATE"
                         }
                     }
                 },
                 {
-                    "entityKey": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIEYoAQ%3D%3D",
+                    "entityKey": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIEYoAQ%3D%3D",
                     "type": "ENTITY_MUTATION_TYPE_REPLACE",
                     "payload": {
                         "engagementToolbarSurfaceEntityPayload": {
-                            "key": "EjRVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96LzEyIEYoAQ%3D%3D",
+                            "key": "EjRVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oLzEyIEYoAQ%3D%3D",
                             "prepareAccountCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
                                     "commandMetadata": {
                                         "webCommandMetadata": {
                                             "ignoreNavigation": true
@@ -328,7 +330,7 @@
                                                             "simpleText": "로그인"
                                                         },
                                                         "navigationEndpoint": {
-                                                            "clickTrackingParams": "CAIQ8FsiEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+                                                            "clickTrackingParams": "CAIQ8FsiEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
                                                             "commandMetadata": {
                                                                 "webCommandMetadata": {
                                                                     "url": "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dko%26next%3Dhttps%253A%252F%252Fwww.youtube.com%252Fyoutubei%252Fv1%252Fnext%253Fkey%253DAIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&hl=ko",
@@ -340,7 +342,7 @@
                                                                 "hack": true
                                                             }
                                                         },
-                                                        "trackingParams": "CAIQ8FsiEwi77vLv6_aRAxUjNnsHHSD7KU4="
+                                                        "trackingParams": "CAIQ8FsiEwiii6rW8faRAxUKS_UFHe1dLI4="
                                                     }
                                                 }
                                             }
@@ -350,27 +352,27 @@
                             },
                             "likeCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH"
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO"
                                 }
                             },
                             "unlikeCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH"
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO"
                                 }
                             },
                             "dislikeCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH"
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO"
                                 }
                             },
                             "undislikeCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH"
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO"
                                 }
                             },
                             "replyCommand": {
                                 "innertubeCommand": {
-                                    "clickTrackingParams": "CAAQg2ciEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+                                    "clickTrackingParams": "CAAQg2ciEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
                                     "commandMetadata": {
                                         "webCommandMetadata": {
                                             "ignoreNavigation": true
@@ -402,7 +404,7 @@
                                                             "simpleText": "로그인"
                                                         },
                                                         "navigationEndpoint": {
-                                                            "clickTrackingParams": "CAEQ8FsiEwi77vLv6_aRAxUjNnsHHSD7KU7KAQTdo8bH",
+                                                            "clickTrackingParams": "CAEQ8FsiEwiii6rW8faRAxUKS_UFHe1dLI7KAQQDNGPO",
                                                             "commandMetadata": {
                                                                 "webCommandMetadata": {
                                                                     "url": "https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dko%26next%3Dhttps%253A%252F%252Fwww.youtube.com%252Fyoutubei%252Fv1%252Fnext%253Fkey%253DAIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&hl=ko",
@@ -414,7 +416,7 @@
                                                                 "hack": true
                                                             }
                                                         },
-                                                        "trackingParams": "CAEQ8FsiEwi77vLv6_aRAxUjNnsHHSD7KU4="
+                                                        "trackingParams": "CAEQ8FsiEwiii6rW8faRAxUKS_UFHe1dLI4="
                                                     }
                                                 }
                                             }
@@ -427,11 +429,11 @@
                     }
                 },
                 {
-                    "entityKey": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICwoAQ%3D%3D",
+                    "entityKey": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICwoAQ%3D%3D",
                     "type": "ENTITY_MUTATION_TYPE_REPLACE",
                     "payload": {
                         "engagementToolbarStateEntityPayload": {
-                            "key": "EjFVZ3dYNU9Nc0kzSEZNRUsxSW14NEFhQUJBZy5BM2VpTEJKbFdaZ0E0UjVMMFdZQV96ICwoAQ%3D%3D",
+                            "key": "EjFVZ3d3akJYZTZZU3RidTJSWU1GNEFhQUJBZy45aXJDbXBsNEhMbTlpcndpelVRV21oICwoAQ%3D%3D",
                             "likeState": "TOOLBAR_LIKE_STATE_INDIFFERENT",
                             "heartState": "TOOLBAR_HEART_STATE_UNHEARTED"
                         }
@@ -439,8 +441,8 @@
                 }
             ],
             "timestamp": {
-                "seconds": "1767700057",
-                "nanos": 449090508
+                "seconds": "1767701614",
+                "nanos": 469225490
             }
         }
     }

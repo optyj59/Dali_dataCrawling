@@ -548,8 +548,8 @@ class RequestCommentEngineA:
 
 
                 if total_comments_from_api < min_comments:
-                    print(f"[WARN] 댓글 수({total_comments_from_api})가 설정된 값({min_comments})보다 낮아 추가 수집을 중단합니다.")
-                    return video_data, all_comments  # 현재까지 수집된 첫 페이지만 반환
+                    print(f"[WARN] 댓글 수({total_comments_from_api})가 설정된 값({min_comments})보다 낮아 추가 수집을 중단하고 영상을 건너뜁니다.")
+                    return None, []  # video_data 대신 None을 반환하여 워커가 해당 영상을 완전히 건너뛰도록 함
             # ----------------------------------------
 
             # 4) 다음 continuation endpoint 수집 

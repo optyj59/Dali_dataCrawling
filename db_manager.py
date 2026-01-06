@@ -45,39 +45,46 @@ class DBManager:
     # -----------------------------------------------------------
     # [1] KEYWORD_MASTER 처리 (UPSERT)
     # -----------------------------------------------------------
-    def insert_keyword(self, keyword_text: str) -> int | None:
+    def insert_keyword(self, keyword_text: str) -> tuple[int, bool] | tuple[None, None]:
         """
-        키워드를 KEYWORD_MASTER에 4삽입하거나, 이미 존재하면 last_used_time을 업데이트합니다.
-        성공 시 keyword_id를 반환합니다.
+        키워드를 KEYWORD_MASTER에 삽입하거나, 이미 존재하면 last_used_time을 업데이트합니다.
+        성공 시 (keyword_id, existed_before) 튜플을 반환합니다.
+        existed_before는 이 함수 호출 이전에 키워드가 존재했는지 여부를 나타냅니다.
         """
         self.connect()
         if not self.conn:
-            return None
+            return None, None
 
         now = datetime.now()
         keyword_id = None
+        existed_before = False
 
-        # ON CONFLICT (keyword_text) DO UPDATE: 키워드가 중복될 경우 UPSERT 수행
-        sql = """
-            INSERT INTO KEYWORD_MASTER (keyword_text, last_used_time)
-            VALUES (%s, %s)
-            ON CONFLICT (keyword_text)
-            DO UPDATE SET last_used_time = %s
-            RETURNING keyword_id;
-        """
         try:
             with self.conn.cursor() as cursor:
+                # 1. 먼저 키워드가 존재하는지 확인
+                cursor.execute("SELECT keyword_id FROM KEYWORD_MASTER WHERE keyword_text = %s;", (keyword_text,))
+                if cursor.fetchone():
+                    existed_before = True
+
+                # 2. UPSERT 쿼리 실행
+                sql = """
+                    INSERT INTO KEYWORD_MASTER (keyword_text, last_used_time)
+                    VALUES (%s, %s)
+                    ON CONFLICT (keyword_text)
+                    DO UPDATE SET last_used_time = %s
+                    RETURNING keyword_id;
+                """
                 cursor.execute(sql, (keyword_text, now, now))
                 result = cursor.fetchone()
                 if result:
                     keyword_id = result[0]
                 self.conn.commit()
-                # print(f"키워드 '{keyword_text}' 처리 완료 (ID: {keyword_id}).")
         except psycopg2.Error as e:
             print(f"키워드 삽입 오류: {e}")
             self.conn.rollback()
+            return None, None
         
-        return keyword_id
+        return keyword_id, existed_before
 
     # -----------------------------------------------------------
     # [2] VIDEO_MASTER 처리 (UPSERT)
